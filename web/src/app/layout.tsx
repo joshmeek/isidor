@@ -66,7 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-[100dvh]">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
         <link rel="icon" href="/icon-16px.png" sizes="16x16" type="image/png" />
         <link rel="icon" href="/icon-128px.png" sizes="128x128" type="image/png" />
         <link rel="icon" href="/icon-256px.png" sizes="256x256" type="image/png" />
