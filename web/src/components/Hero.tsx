@@ -22,7 +22,7 @@ export default function Hero() {
   }
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-transparent">
+    <div className="relative h-screen h-[100dvh] w-full overflow-hidden bg-transparent">
       {/* Subtle grid pattern */}
       {/* <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" /> */}
       
