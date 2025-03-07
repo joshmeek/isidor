@@ -22,12 +22,12 @@ export default function Hero() {
   }
 
   return (
-    <div className="relative h-screen h-[100dvh] w-full overflow-hidden bg-transparent">
+    <div className="relative min-h-screen min-h-[100dvh] overflow-hidden bg-gradient-to-b from-slate-50 to-white">
       {/* Subtle grid pattern */}
       {/* <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" /> */}
       
       {/* Content container with glow effect */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
+      <div className="relative z-10 min-h-screen min-h-[100dvh] flex flex-col items-center justify-center px-4">
         {/* Very visible glow around content */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
           <motion.div 
