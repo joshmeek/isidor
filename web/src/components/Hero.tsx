@@ -24,7 +24,7 @@ export default function Hero() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-50 to-white">
       {/* Subtle grid pattern */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" />
+      {/* <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" /> */}
       
       {/* Content container with glow effect */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4">
