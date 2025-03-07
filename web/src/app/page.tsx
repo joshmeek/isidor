@@ -5,7 +5,7 @@ import Hero from '@/components/Hero'
 
 export default function Home() {
   return (
-    <main className="w-full bg-gradient-to-b from-white to-gray-50">
+    <main className="h-screen w-full bg-gradient-to-b from-slate-50 to-white overflow-hidden">
       <Hero />
     </main>
   )

@@ -66,7 +66,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
         <link rel="icon" href="/icon-16px.png" sizes="16x16" type="image/png" />
         <link rel="icon" href="/icon-128px.png" sizes="128x128" type="image/png" />
         <link rel="icon" href="/icon-256px.png" sizes="256x256" type="image/png" />
@@ -75,7 +75,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-256px.png" sizes="256x256" />
         <link rel="shortcut icon" href="/icon-512px.png" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden`}>
         {children}
       </body>
     </html>
