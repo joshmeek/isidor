@@ -22,7 +22,7 @@ export default function Hero() {
   }
 
   return (
-    <div className="relative min-h-screen min-h-[100dvh] overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+    <div className="relative min-h-screen min-h-[100dvh] w-full overflow-hidden bg-gradient-to-b from-slate-50 to-white">
       {/* Subtle grid pattern */}
       {/* <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]" /> */}
       
@@ -46,39 +46,37 @@ export default function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
-          className="text-center relative z-20 w-full"
+          className="text-center max-w-xl relative z-20"
         >
           {/* Clean logo/title */}
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
-            className="text-5xl md:text-8xl font-extralight tracking-wider text-slate-800 mb-6 whitespace-nowrap"
+            className="text-6xl md:text-8xl font-extralight tracking-wider text-slate-800 mb-6"
           >
             isidor
           </motion.h1>
 
           {/* Main tagline */}
-          <div className="overflow-x-auto overflow-y-hidden scrollbar-hide">
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 1 }}
-              className="text-lg md:text-xl text-slate-700 font-light mb-3 whitespace-nowrap px-4"
-            >
-              AI-powered protocols for human optimization
-            </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 1 }}
+            className="text-xl text-slate-700 font-light mb-3"
+          >
+            AI-powered protocols for human optimization
+          </motion.p>
 
-            {/* Secondary tagline */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7, duration: 1 }}
-              className="text-sm text-slate-500 font-light whitespace-nowrap px-4 mb-12"
-            >
-              Powered by data, controlled by you
-            </motion.p>
-          </div>
+          {/* Secondary tagline */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7, duration: 1 }}
+            className="text-sm text-slate-500 font-light max-w-md mx-auto mb-12"
+          >
+            Powered by data, controlled by you
+          </motion.p>
 
           {/* Integrated email input with submit button */}
           <motion.div
