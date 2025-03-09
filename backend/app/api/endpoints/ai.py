@@ -1,7 +1,9 @@
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from app.api.endpoints.auth import get_current_active_user
 from app.db.session import get_db
+from app.schemas.user import User as UserSchema
 from app.services.ai import analyze_health_trends, generate_health_insight, generate_protocol_recommendation
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -27,10 +29,20 @@ class TrendAnalysisRequest(BaseModel):
 
 
 @router.post("/insights/{user_id}", response_model=Dict[str, Any])
-async def get_health_insight(*, db: Session = Depends(get_db), user_id: UUID, request: HealthInsightRequest) -> Any:
+async def get_health_insight(
+    *,
+    db: Session = Depends(get_db),
+    user_id: UUID,
+    request: HealthInsightRequest,
+    current_user: UserSchema = Depends(get_current_active_user),
+) -> Any:
     """
     Generate a health insight using Gemini AI with RAG.
     """
+    # Ensure the user can only access their own insights
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access insights for other users")
+
     try:
         result = await generate_health_insight(
             db=db, user_id=user_id, query=request.query, metric_types=request.metric_types, update_memory=request.update_memory
@@ -41,10 +53,20 @@ async def get_health_insight(*, db: Session = Depends(get_db), user_id: UUID, re
 
 
 @router.post("/protocols/{user_id}", response_model=Dict[str, Any])
-async def get_protocol_recommendation(*, db: Session = Depends(get_db), user_id: UUID, request: ProtocolRecommendationRequest) -> Any:
+async def get_protocol_recommendation(
+    *,
+    db: Session = Depends(get_db),
+    user_id: UUID,
+    request: ProtocolRecommendationRequest,
+    current_user: UserSchema = Depends(get_current_active_user),
+) -> Any:
     """
     Generate a protocol recommendation using Gemini AI.
     """
+    # Ensure the user can only access their own protocol recommendations
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access protocol recommendations for other users")
+
     try:
         result = await generate_protocol_recommendation(
             db=db, user_id=user_id, health_goal=request.health_goal, current_metrics=request.current_metrics
@@ -55,10 +77,20 @@ async def get_protocol_recommendation(*, db: Session = Depends(get_db), user_id:
 
 
 @router.post("/trends/{user_id}", response_model=Dict[str, Any])
-async def get_trend_analysis(*, db: Session = Depends(get_db), user_id: UUID, request: TrendAnalysisRequest) -> Any:
+async def get_trend_analysis(
+    *,
+    db: Session = Depends(get_db),
+    user_id: UUID,
+    request: TrendAnalysisRequest,
+    current_user: UserSchema = Depends(get_current_active_user),
+) -> Any:
     """
     Analyze health trends for a specific metric using Gemini AI.
     """
+    # Ensure the user can only access their own trend analysis
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access trend analysis for other users")
+
     try:
         result = await analyze_health_trends(db=db, user_id=user_id, metric_type=request.metric_type, time_period=request.time_period)
         return result

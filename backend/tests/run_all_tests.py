@@ -2,63 +2,74 @@ import importlib
 import os
 import subprocess
 import sys
-from typing import List, Tuple
+from typing import Dict, List, Tuple, Union
 
 # List of test modules to run
-TEST_MODULES = ["tests.test_auth", "tests.test_protocols", "tests.test_user_protocols", "tests.test_ai_endpoints"]
+TEST_MODULES = [
+    "tests.test_auth",
+    "tests.test_protocols",
+    "tests.test_user_protocols",
+    "tests.test_ai_endpoints",
+    "tests.test_security",  # Add the new security test
+]
 
 
 def run_test_module(module_name: str) -> Tuple[bool, str]:
-    """Run a test module and return success status and output."""
-    print(f"\n{'=' * 80}")
+    """
+    Run a test module as a subprocess and capture the output.
+
+    Args:
+        module_name: The name of the module to run
+
+    Returns:
+        Tuple of (success, output)
+    """
+    print(f"\n================================================================================")
     print(f"Running {module_name}...")
-    print(f"{'=' * 80}\n")
+    print(f"================================================================================\n")
 
-    try:
-        # Run the test module as a subprocess to capture output
-        result = subprocess.run([sys.executable, "-m", module_name], capture_output=True, text=True)
+    # Run the test module as a subprocess
+    process = subprocess.Popen([sys.executable, "-m", module_name], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-        # Print the output
-        print(result.stdout)
-        if result.stderr:
-            print("ERRORS:")
-            print(result.stderr)
+    # Capture the output
+    output, _ = process.communicate()
 
-        # Return success status and output
-        return result.returncode == 0, result.stdout
-    except Exception as e:
-        print(f"Error running {module_name}: {e}")
-        return False, str(e)
+    # Print the output
+    print(output)
+
+    # Return success status and output
+    return process.returncode == 0, output
 
 
 def main():
-    """Run all tests and print a summary."""
-    results = []
+    """Run all test modules and print a summary."""
+    results: Dict[str, bool] = {}
 
+    # Run each test module
     for module_name in TEST_MODULES:
-        success, output = run_test_module(module_name)
-        results.append((module_name, success))
+        success, _ = run_test_module(module_name)
+        results[module_name] = success
 
     # Print summary
-    print("\n" + "=" * 80)
+    print("\n================================================================================")
     print("TEST SUMMARY")
-    print("=" * 80)
+    print("================================================================================")
 
     all_passed = True
-    for module_name, success in results:
+    for module_name, success in results.items():
         status = "PASSED" if success else "FAILED"
         print(f"{module_name}: {status}")
         if not success:
             all_passed = False
 
-    print("\n" + "=" * 80)
+    print("\n================================================================================")
     if all_passed:
         print("All tests passed!")
     else:
-        print("Some tests failed. See above for details.")
-    print("=" * 80)
+        print("Some tests failed!")
+    print("================================================================================\n")
 
-    # Return exit code
+    # Return exit code based on success
     return 0 if all_passed else 1
 
 

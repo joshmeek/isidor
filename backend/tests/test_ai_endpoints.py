@@ -8,8 +8,14 @@ import requests
 # Base URL for the API
 BASE_URL = "http://localhost:8000/api"
 
-# Test user ID (this would normally be created through the auth endpoints)
-TEST_USER_ID = str(uuid.uuid4())
+# Test user credentials
+TEST_USER_EMAIL = f"test_user_{uuid.uuid4()}@example.com"
+TEST_PASSWORD = "testpassword123"
+TEST_USER_ID = None
+
+# Authentication tokens
+ACCESS_TOKEN = None
+REFRESH_TOKEN = None
 
 # Sample health metrics data
 SLEEP_METRICS = [
@@ -88,15 +94,36 @@ def create_test_user():
     print(f"Creating test user with ID: {TEST_USER_ID}")
 
     # Create a user with a specific ID
-    response = requests.post(f"{BASE_URL}/users", json={"email": f"test-{TEST_USER_ID}@example.com"})
+    response = requests.post(f"{BASE_URL}/users/", json={"email": TEST_USER_EMAIL, "password": TEST_PASSWORD})
 
     if response.status_code == 200:
         user_data = response.json()
         TEST_USER_ID = user_data["id"]
         print(f"Created test user with ID: {TEST_USER_ID}")
+
+        # Login to get authentication tokens
+        login_user()
+
         return True
     else:
         print(f"Failed to create test user: {response.text}")
+        return False
+
+
+def login_user():
+    """Login the test user to get authentication tokens."""
+    global ACCESS_TOKEN, REFRESH_TOKEN
+
+    response = requests.post(f"{BASE_URL}/auth/login", data={"username": TEST_USER_EMAIL, "password": TEST_PASSWORD})
+
+    if response.status_code == 200:
+        token_data = response.json()
+        ACCESS_TOKEN = token_data["access_token"]
+        REFRESH_TOKEN = token_data["refresh_token"]
+        print("Login successful, tokens received")
+        return True
+    else:
+        print(f"Login failed: {response.text}")
         return False
 
 
@@ -104,9 +131,12 @@ def create_health_metrics():
     """Create sample health metrics for testing."""
     print("Creating sample health metrics...")
 
+    # Authentication header
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
     # Create sleep metrics
     for metric in SLEEP_METRICS:
-        response = requests.post(f"{BASE_URL}/health-metrics", json={**metric, "user_id": TEST_USER_ID})
+        response = requests.post(f"{BASE_URL}/health-metrics/", json={**metric, "user_id": TEST_USER_ID}, headers=headers)
         if response.status_code == 200:
             print(f"Created sleep metric for {metric['date']}")
         else:
@@ -114,7 +144,7 @@ def create_health_metrics():
 
     # Create activity metrics
     for metric in ACTIVITY_METRICS:
-        response = requests.post(f"{BASE_URL}/health-metrics", json={**metric, "user_id": TEST_USER_ID})
+        response = requests.post(f"{BASE_URL}/health-metrics/", json={**metric, "user_id": TEST_USER_ID}, headers=headers)
         if response.status_code == 200:
             print(f"Created activity metric for {metric['date']}")
         else:
@@ -125,9 +155,13 @@ def test_health_insight():
     """Test the health insight endpoint."""
     print("\nTesting health insight endpoint...")
 
+    # Authentication header
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
     response = requests.post(
         f"{BASE_URL}/ai/insights/{TEST_USER_ID}",
         json={"query": "How has my sleep been over the past few days?", "metric_types": ["sleep"], "update_memory": True},
+        headers=headers,
     )
 
     if response.status_code == 200:
@@ -146,9 +180,13 @@ def test_protocol_recommendation():
     """Test the protocol recommendation endpoint."""
     print("\nTesting protocol recommendation endpoint...")
 
+    # Authentication header
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
     response = requests.post(
         f"{BASE_URL}/ai/protocols/{TEST_USER_ID}",
         json={"health_goal": "I want to improve my sleep quality and consistency", "current_metrics": ["sleep", "activity"]},
+        headers=headers,
     )
 
     if response.status_code == 200:
@@ -167,7 +205,12 @@ def test_trend_analysis():
     """Test the trend analysis endpoint."""
     print("\nTesting trend analysis endpoint...")
 
-    response = requests.post(f"{BASE_URL}/ai/trends/{TEST_USER_ID}", json={"metric_type": "activity", "time_period": "last_week"})
+    # Authentication header
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
+    response = requests.post(
+        f"{BASE_URL}/ai/trends/{TEST_USER_ID}", json={"metric_type": "activity", "time_period": "last_week"}, headers=headers
+    )
 
     if response.status_code == 200:
         result = response.json()

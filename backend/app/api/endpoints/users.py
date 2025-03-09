@@ -1,6 +1,7 @@
 from typing import Any, List
 from uuid import UUID
 
+from app.api.endpoints.auth import get_current_active_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import User as UserSchema
@@ -16,6 +17,8 @@ router = APIRouter()
 def create_user_endpoint(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
     """
     Create new user.
+
+    This endpoint is public to allow user registration.
     """
     user = get_user_by_email(db, email=user_in.email)
     if user:
@@ -24,10 +27,14 @@ def create_user_endpoint(*, db: Session = Depends(get_db), user_in: UserCreate) 
 
 
 @router.get("/{user_id}", response_model=UserSchema)
-def read_user(*, db: Session = Depends(get_db), user_id: UUID) -> Any:
+def read_user(*, db: Session = Depends(get_db), user_id: UUID, current_user: UserSchema = Depends(get_current_active_user)) -> Any:
     """
     Get user by ID.
     """
+    # Ensure users can only access their own information
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access other user's information")
+
     user = get_user(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -35,10 +42,16 @@ def read_user(*, db: Session = Depends(get_db), user_id: UUID) -> Any:
 
 
 @router.put("/{user_id}", response_model=UserSchema)
-def update_user_endpoint(*, db: Session = Depends(get_db), user_id: UUID, user_in: UserUpdate) -> Any:
+def update_user_endpoint(
+    *, db: Session = Depends(get_db), user_id: UUID, user_in: UserUpdate, current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
     """
     Update a user.
     """
+    # Ensure users can only update their own information
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update other user's information")
+
     user = get_user(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -46,10 +59,16 @@ def update_user_endpoint(*, db: Session = Depends(get_db), user_id: UUID, user_i
 
 
 @router.delete("/{user_id}", response_model=bool)
-def delete_user_endpoint(*, db: Session = Depends(get_db), user_id: UUID) -> Any:
+def delete_user_endpoint(
+    *, db: Session = Depends(get_db), user_id: UUID, current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
     """
     Delete a user.
     """
+    # Ensure users can only delete their own account
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete other user's account")
+
     user = get_user(db, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

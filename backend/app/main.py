@@ -1,4 +1,6 @@
 from app.api.endpoints import ai, auth, health_metrics, protocols, user_protocols, users
+from app.core.config import settings
+from app.middleware import add_rate_limit_middleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,11 +13,14 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=settings.BACKEND_CORS_ORIGINS,  # Use origins from settings
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add rate limiting middleware
+add_rate_limit_middleware(app)
 
 
 @app.get("/")
