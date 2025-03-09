@@ -1,11 +1,11 @@
 import uuid
 from datetime import date
-from sqlalchemy import Column, String, Date, ForeignKey, text
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
-from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Column, Date, ForeignKey, String, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import relationship
 
 
 class HealthMetric(Base):
@@ -18,6 +18,6 @@ class HealthMetric(Base):
     value = Column(JSONB, nullable=False)  # Flexible storage for various metric types
     source = Column(String, nullable=False)  # e.g., "healthkit", "manual", "oura"
     embedding = Column(Vector(384), nullable=True)  # Vector embedding for semantic search
-    
+
     # Relationship
-    user = relationship("User", back_populates="health_metrics") 
+    user = relationship("User", back_populates="health_metrics")

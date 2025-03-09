@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 # Shared properties
@@ -35,4 +36,4 @@ class User(UserInDBBase):
 
 # Properties stored in DB
 class UserInDB(UserInDBBase):
-    password_hash: str 
+    password_hash: str

@@ -1,27 +1,22 @@
 from typing import Any, List, Optional
 from uuid import UUID
+
+from app.api.endpoints.auth import get_current_active_user
+from app.db.session import get_db
+from app.schemas.protocol import Protocol as ProtocolSchema
+from app.schemas.protocol import ProtocolCreate, ProtocolTemplate, ProtocolTemplateCustomization, ProtocolUpdate
+from app.schemas.user import User as UserSchema
+from app.services.protocol import (
+    create_protocol,
+    create_protocol_from_template,
+    delete_protocol,
+    get_protocol,
+    get_protocol_templates,
+    get_protocols,
+    update_protocol,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-
-from app.db.session import get_db
-from app.api.endpoints.auth import get_current_active_user
-from app.services.protocol import (
-    get_protocol,
-    get_protocols,
-    create_protocol,
-    update_protocol,
-    delete_protocol,
-    get_protocol_templates,
-    create_protocol_from_template
-)
-from app.schemas.protocol import (
-    Protocol as ProtocolSchema,
-    ProtocolCreate,
-    ProtocolUpdate,
-    ProtocolTemplate,
-    ProtocolTemplateCustomization
-)
-from app.schemas.user import User as UserSchema
 
 router = APIRouter()
 
@@ -38,21 +33,13 @@ def read_protocols(
     """
     Retrieve protocols.
     """
-    protocols = get_protocols(
-        db=db, 
-        skip=skip, 
-        limit=limit,
-        target_metric=target_metric
-    )
+    protocols = get_protocols(db=db, skip=skip, limit=limit, target_metric=target_metric)
     return protocols
 
 
 @router.post("/", response_model=ProtocolSchema)
 def create_protocol_endpoint(
-    *,
-    db: Session = Depends(get_db),
-    protocol_in: ProtocolCreate,
-    current_user: UserSchema = Depends(get_current_active_user)
+    *, db: Session = Depends(get_db), protocol_in: ProtocolCreate, current_user: UserSchema = Depends(get_current_active_user)
 ) -> Any:
     """
     Create new protocol.
@@ -62,12 +49,7 @@ def create_protocol_endpoint(
 
 
 @router.get("/{protocol_id}", response_model=ProtocolSchema)
-def read_protocol(
-    *,
-    db: Session = Depends(get_db),
-    protocol_id: UUID,
-    current_user: UserSchema = Depends(get_current_active_user)
-) -> Any:
+def read_protocol(*, db: Session = Depends(get_db), protocol_id: UUID, current_user: UserSchema = Depends(get_current_active_user)) -> Any:
     """
     Get protocol by ID.
     """
@@ -91,17 +73,14 @@ def update_protocol_endpoint(
     protocol = get_protocol(db=db, protocol_id=protocol_id)
     if not protocol:
         raise HTTPException(status_code=404, detail="Protocol not found")
-    
+
     protocol = update_protocol(db=db, db_obj=protocol, protocol_in=protocol_in)
     return protocol
 
 
 @router.delete("/{protocol_id}", response_model=dict)
 def delete_protocol_endpoint(
-    *,
-    db: Session = Depends(get_db),
-    protocol_id: UUID,
-    current_user: UserSchema = Depends(get_current_active_user)
+    *, db: Session = Depends(get_db), protocol_id: UUID, current_user: UserSchema = Depends(get_current_active_user)
 ) -> Any:
     """
     Delete a protocol.
@@ -109,17 +88,13 @@ def delete_protocol_endpoint(
     protocol = get_protocol(db=db, protocol_id=protocol_id)
     if not protocol:
         raise HTTPException(status_code=404, detail="Protocol not found")
-    
+
     delete_protocol(db=db, protocol_id=protocol_id)
     return {"message": "Protocol deleted successfully"}
 
 
 @router.get("/templates/list", response_model=List[ProtocolTemplate])
-def read_protocol_templates(
-    *,
-    db: Session = Depends(get_db),
-    current_user: UserSchema = Depends(get_current_active_user)
-) -> Any:
+def read_protocol_templates(*, db: Session = Depends(get_db), current_user: UserSchema = Depends(get_current_active_user)) -> Any:
     """
     Get available protocol templates.
     """
@@ -140,10 +115,10 @@ def create_from_template(
     protocol = create_protocol_from_template(
         db=db,
         template_id=template_customization.template_id,
-        customizations=template_customization.model_dump(exclude={"template_id"}, exclude_unset=True)
+        customizations=template_customization.model_dump(exclude={"template_id"}, exclude_unset=True),
     )
-    
+
     if not protocol:
         raise HTTPException(status_code=404, detail="Protocol template not found")
-    
-    return protocol 
+
+    return protocol

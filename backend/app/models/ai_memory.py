@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, Text, DateTime, ForeignKey, text
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from pgvector.sqlalchemy import Vector
 
 from app.db.session import Base
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import Column, DateTime, ForeignKey, Text, text
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 
 
 class AIMemory(Base):
@@ -16,6 +16,6 @@ class AIMemory(Base):
     summary = Column(Text, nullable=False)
     last_updated = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     embedding = Column(Vector(384), nullable=True)  # Vector embedding for semantic retrieval
-    
+
     # Relationship
-    user = relationship("User", back_populates="ai_memory") 
+    user = relationship("User", back_populates="ai_memory")

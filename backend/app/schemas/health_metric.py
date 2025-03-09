@@ -1,6 +1,7 @@
+from datetime import date
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from datetime import date
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -44,4 +45,4 @@ class HealthMetricSimilaritySearch(BaseModel):
     query: str
     metric_type: Optional[str] = None
     limit: int = 10
-    min_similarity: float = 0.7 
+    min_similarity: float = 0.7

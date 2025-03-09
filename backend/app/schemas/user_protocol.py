@@ -1,13 +1,14 @@
-from typing import Optional, Dict, Any
-from uuid import UUID
 from datetime import date
-from pydantic import BaseModel, ConfigDict
+from typing import Any, Dict, Optional
+from uuid import UUID
 
 from app.schemas.protocol import Protocol
+from pydantic import BaseModel, ConfigDict
 
 
 class UserProtocolBase(BaseModel):
     """Base user protocol schema."""
+
     user_id: UUID
     protocol_id: UUID
     start_date: date
@@ -17,12 +18,14 @@ class UserProtocolBase(BaseModel):
 
 class UserProtocolCreate(BaseModel):
     """User protocol creation schema."""
+
     protocol_id: UUID
     start_date: Optional[date] = None
 
 
 class UserProtocolUpdate(BaseModel):
     """User protocol update schema."""
+
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: Optional[str] = None
@@ -30,6 +33,7 @@ class UserProtocolUpdate(BaseModel):
 
 class UserProtocolInDBBase(UserProtocolBase):
     """User protocol in DB base schema."""
+
     id: UUID
 
     model_config = ConfigDict(from_attributes=True)
@@ -37,16 +41,19 @@ class UserProtocolInDBBase(UserProtocolBase):
 
 class UserProtocol(UserProtocolInDBBase):
     """User protocol schema for response."""
+
     pass
 
 
 class UserProtocolWithProtocol(UserProtocol):
     """User protocol with protocol details."""
+
     protocol: Protocol
 
 
 class UserProtocolProgress(BaseModel):
     """User protocol progress schema."""
+
     user_protocol_id: UUID
     protocol_id: UUID
     protocol_name: str
@@ -63,4 +70,5 @@ class UserProtocolProgress(BaseModel):
 
 class UserProtocolStatusUpdate(BaseModel):
     """User protocol status update schema."""
-    status: str 
+
+    status: str

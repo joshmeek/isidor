@@ -1,7 +1,6 @@
+from app.api.endpoints import ai, auth, health_metrics, protocols, user_protocols, users
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from app.api.endpoints import health_metrics, ai, users, auth, protocols, user_protocols
 
 app = FastAPI(
     title="Isidor API",
@@ -18,13 +17,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Isidor API"}
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
 
 # Include API routers
 app.include_router(health_metrics.router, prefix="/api/health-metrics", tags=["Health Metrics"])
@@ -40,4 +42,5 @@ app.include_router(user_protocols.router, prefix="/api/user-protocols", tags=["U
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True) 
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
