@@ -14,7 +14,7 @@ Project Structure:
     
 ├── api/                 (Python FastAPI backend)
     Purpose: Data processing, AI analysis, and protocol management
-    Key Features: Health data aggregation, AI agent interaction, secure data storage
+    Key Features: Health data aggregation, AI agent interaction, secure data storage, vector embeddings
     
 ├── db/                  (PostgreSQL + migrations)
     Purpose: Secure storage of user data and protocol tracking
@@ -42,12 +42,14 @@ health_metrics
 - metric_type: text
 - value: jsonb
 - source: text
+- embedding: vector
   Purpose: Flexible storage for various health metrics:
   - Sleep data (duration, quality, phases)
   - Activity data (steps, exercise)
   - Heart metrics (rate, variability)
   - Manual inputs (mood, nutrition, etc.)
-  Enables: Trend analysis, protocol tracking, AI insights
+  - Vector embeddings for semantic search and pattern recognition
+  Enables: Trend analysis, protocol tracking, AI insights, similarity search
 
 protocols
 - id: uuid PRIMARY KEY
@@ -79,16 +81,18 @@ ai_memory
 - user_id: uuid FOREIGN KEY
 - summary: text
 - last_updated: timestamp
+- embedding: vector
   Purpose: Maintains AI context without full history:
   - Stores compressed insights about user patterns
   - Tracks protocol effectiveness
   - Maintains user preferences and key observations
   - Enables personalized interactions without privacy concerns
+  - Vector embeddings for semantic retrieval of relevant context
 
 3. IMPLEMENTATION PHASES & OBJECTIVES
 
 PHASE 1: Foundation
-Objective: Create secure, reliable data collection system
+Objective: Create secure, reliable data collection system with RAG capabilities
 Key Deliverables:
 - Secure user authentication and data storage
   * JWT-based authentication system with refresh tokens
@@ -99,11 +103,17 @@ Key Deliverables:
   * Data models for flexible health metric storage
   * API endpoints for data ingestion from multiple sources
   * Data validation and sanitization pipeline
+  * Vector embedding generation for health metrics
+- Vector database integration
+  * PostgreSQL with pgvector extension
+  * Embedding generation pipeline for health data
+  * Similarity search capabilities
+  * Efficient vector indexing (HNSW, IVF)
 - Basic data visualization system
   * Time-series visualization components
   * Metric comparison views
   * Basic dashboard layout system
-Why: Establishes trust and reliable data foundation for all future features
+Why: Establishes trust and reliable data foundation with advanced retrieval capabilities for all future features
 
 PHASE 2: Health Data Integration
 Objective: Automated and manual health tracking
@@ -165,6 +175,11 @@ Why: Transforms raw data into actionable improvement frameworks
 PHASE 4: AI Integration
 Objective: Intelligent health insights and guidance
 Key Deliverables:
+- Retrieval-Augmented Generation (RAG) system
+  * Vector-based retrieval of relevant health data
+  * Semantic search across user health history
+  * Context-aware prompt construction
+  * Hybrid retrieval combining metadata and vector similarity
 - Gemini-powered analysis system
   * Integration with Gemini API
   * Prompt engineering for health insights
@@ -175,11 +190,13 @@ Key Deliverables:
   * Anomaly detection for health metrics
   * Correlation discovery between metrics
   * Sleep pattern classification
+  * Embedding-based pattern clustering
 - Protocol adjustment recommendations
   * Effectiveness analysis algorithms
   * Personalized protocol modification suggestions
   * A/B testing framework for protocol variants
   * Outcome prediction models
+  * Similar user pattern matching
 - User-controlled AI interaction system
   * AI interaction frequency settings
   * Insight delivery preferences
@@ -247,10 +264,17 @@ Backend:
   * ORM models matching database schema
   * Migration scripts for schema evolution
   * Query optimization for common operations
+- Vector Embeddings
+  Why: Enables semantic search and pattern recognition in health data
+  Implementation:
+  * pgvector extension for PostgreSQL
+  * Sentence transformers for embedding generation
+  * Vector similarity search endpoints
+  * Efficient vector indexing and retrieval
 - Gemini API
   Why: Advanced AI capabilities with privacy controls
   Implementation:
-  * Context management system
+  * RAG-enhanced context management system
   * Prompt engineering framework
   * Response parsing and validation
 
