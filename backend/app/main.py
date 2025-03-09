@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.endpoints import health_metrics, ai, users
+from app.api.endpoints import health_metrics, ai, users, auth, protocols, user_protocols
 
 app = FastAPI(
     title="Isidor API",
@@ -30,10 +30,12 @@ async def health_check():
 app.include_router(health_metrics.router, prefix="/api/health-metrics", tags=["Health Metrics"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(protocols.router, prefix="/api/protocols", tags=["Protocols"])
+app.include_router(user_protocols.router, prefix="/api/user-protocols", tags=["User Protocols"])
 
 # Import and include other API routers as they are developed
-# from app.api.endpoints import auth, protocols
-# app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+# from app.api.endpoints import protocols
 # app.include_router(protocols.router, prefix="/api/protocols", tags=["Protocols"])
 
 if __name__ == "__main__":
