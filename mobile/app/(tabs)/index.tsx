@@ -38,6 +38,7 @@ interface Protocol {
 type TimePeriod = 'today' | 'week' | 'month';
 
 export default function HomeScreen() {
+  console.log('Rendering HomeScreen (Dashboard)');
   const { user, isAuthenticated, logout } = useAuth();
   const [metrics, setMetrics] = useState<HealthMetric[]>([]);
   const [activeProtocols, setActiveProtocols] = useState<Protocol[]>([]);
@@ -45,77 +46,50 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('today');
+  const [summary, setSummary] = useState<any>({});
 
   // Function to load data
   const loadData = async () => {
-    if (!isAuthenticated) {
-      console.log('Not loading data - user not authenticated');
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
     try {
-      // Get health metrics based on selected time period
-      try {
-        const today = new Date();
-        let startDate: Date;
-        
-        // Calculate start date based on time period
-        switch (timePeriod) {
-          case 'today':
-            startDate = today;
-            break;
-          case 'week':
-            startDate = new Date(today);
-            startDate.setDate(today.getDate() - 7);
-            break;
-          case 'month':
-            startDate = new Date(today);
-            startDate.setMonth(today.getMonth() - 1);
-            break;
-        }
-        
-        // Format dates as YYYY-MM-DD
-        const formattedStartDate = startDate.toISOString().split('T')[0];
-        const formattedEndDate = today.toISOString().split('T')[0];
-        
-        console.log(`Fetching health metrics from ${formattedStartDate} to ${formattedEndDate}`);
-        
-        const healthMetrics = await api.getHealthMetrics(formattedStartDate, formattedEndDate);
-        console.log('Health metrics response:', JSON.stringify(healthMetrics, null, 2));
-        setMetrics(healthMetrics || []);
-      } catch (err) {
-        console.error('Failed to load health metrics:', err);
-        // Continue with other data loading even if health metrics fail
-        setMetrics([]);
+      console.log('Loading dashboard data...');
+      setError(null);
+      setIsLoading(true);
+
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch health metrics based on selected time period
+      let startDate = today;
+      if (timePeriod === 'week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        startDate = weekAgo.toISOString().split('T')[0];
+      } else if (timePeriod === 'month') {
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        startDate = monthAgo.toISOString().split('T')[0];
       }
       
-      // Get active protocols
-      try {
-        const protocols = await api.getActiveProtocols();
-        console.log('Active protocols response:', JSON.stringify(protocols, null, 2));
-        setActiveProtocols(protocols || []);
-      } catch (err) {
-        console.error('Failed to load active protocols:', err);
-        setActiveProtocols([]);
-      }
-    } catch (err) {
-      console.error('Failed to load data:', err);
+      console.log('Fetching health metrics from', startDate, 'to', today);
+      const metricsResponse = await api.getHealthMetrics(startDate, today);
+      console.log('Received', metricsResponse.length, 'health metrics');
+      setMetrics(metricsResponse);
       
-      // Handle authentication errors by redirecting to login
-      if (err instanceof api.ApiError && err.status === 401) {
-        console.log('Authentication error, redirecting to login');
-        router.replace('/login');
-        return;
-      }
+      // Calculate summary
+      const calculatedSummary = calculateSummary(metricsResponse);
+      setSummary(calculatedSummary);
       
-      setError('Failed to load data. Pull down to refresh.');
-    } finally {
+      // Fetch active protocols
+      console.log('Fetching active protocols');
+      const protocolsResponse = await api.getActiveProtocols();
+      console.log('Received', protocolsResponse.length, 'active protocols');
+      setActiveProtocols(protocolsResponse);
+
       setIsLoading(false);
-      setRefreshing(false);
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError('Failed to load data. Please try again.');
+      setIsLoading(false);
     }
   };
 
@@ -390,6 +364,51 @@ export default function HomeScreen() {
     );
   };
 
+  // Update navigation paths in the renderActiveProtocols function
+  const renderActiveProtocols = () => {
+    if (activeProtocols.length === 0) {
+      return (
+        <ThemedView style={styles.emptyText}>No active protocols</ThemedView>
+      );
+    }
+    
+    return (
+      <>
+        {activeProtocols.map((protocol, index) => (
+          <ThemedView key={protocol.id || index} style={styles.protocolItem}>
+            <ThemedText type="defaultSemiBold">{protocol.name || protocol.protocol?.name || 'Unnamed Protocol'}</ThemedText>
+            <ThemedText style={styles.protocolDescription}>
+              {protocol.description || protocol.protocol?.description || ''}
+            </ThemedText>
+            {protocol.start_date && (
+              <ThemedText style={styles.protocolDate}>
+                Started: {new Date(protocol.start_date).toLocaleDateString()}
+                {protocol.end_date ? ` - Ends: ${new Date(protocol.end_date).toLocaleDateString()}` : ''}
+              </ThemedText>
+            )}
+            {protocol.status && (
+              <ThemedText style={styles.protocolStatus}>
+                Status: <ThemedText type="defaultSemiBold">{protocol.status}</ThemedText>
+              </ThemedText>
+            )}
+            <TouchableOpacity 
+              style={styles.viewDetailsButton}
+              onPress={() => {
+                console.log('Navigating to protocol details with ID:', protocol.id);
+                router.push({
+                  pathname: "/protocol-details",
+                  params: { id: protocol.id }
+                });
+              }}
+            >
+              <ThemedText style={styles.viewDetailsText}>View Details</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        ))}
+      </>
+    );
+  };
+
   // Show loading indicator
   if (isLoading && !refreshing) {
     return (
@@ -463,29 +482,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.card}>
         <ThemedText type="subtitle">Active Protocols</ThemedText>
         
-        {activeProtocols.length === 0 ? (
-          <ThemedText style={styles.emptyText}>No active protocols</ThemedText>
-        ) : (
-          activeProtocols.map((protocol, index) => (
-            <ThemedView key={protocol.id || index} style={styles.protocolItem}>
-              <ThemedText type="defaultSemiBold">{protocol.name || protocol.protocol?.name || 'Unnamed Protocol'}</ThemedText>
-              <ThemedText style={styles.protocolDescription}>
-                {protocol.description || protocol.protocol?.description || ''}
-              </ThemedText>
-              {protocol.start_date && (
-                <ThemedText style={styles.protocolDate}>
-                  Started: {new Date(protocol.start_date).toLocaleDateString()}
-                  {protocol.end_date ? ` - Ends: ${new Date(protocol.end_date).toLocaleDateString()}` : ''}
-                </ThemedText>
-              )}
-              {protocol.status && (
-                <ThemedText style={styles.protocolStatus}>
-                  Status: <ThemedText type="defaultSemiBold">{protocol.status}</ThemedText>
-                </ThemedText>
-              )}
-            </ThemedView>
-          ))
-        )}
+        {renderActiveProtocols()}
       </ThemedView>
       
       <ThemedView style={styles.logoutContainer}>
@@ -676,5 +673,16 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#d32f2f',
+  },
+  viewDetailsButton: {
+    marginTop: 4,
+    padding: 8,
+    backgroundColor: '#0a7ea4',
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  viewDetailsText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

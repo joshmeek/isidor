@@ -346,17 +346,41 @@ export async function getHealthMetrics(startDate?: string, endDate?: string): Pr
   }
 }
 
-export async function createHealthMetric(metricData: any): Promise<any> {
+export interface HealthMetricInput {
+  metric_type: string;
+  value: any;
+  source: string;
+  date: string;
+}
+
+export async function createHealthMetric(metricData: HealthMetricInput): Promise<any> {
+  console.log('Creating health metric:', JSON.stringify(metricData, null, 2));
   return authenticatedRequest<any>('/api/v1/health-metrics/', 'POST', metricData);
 }
 
 // Protocol API functions
 export async function getProtocols(): Promise<any[]> {
-  return authenticatedRequest<any[]>('/api/v1/protocols/');
+  console.log('Fetching available protocols');
+  try {
+    const protocols = await authenticatedRequest<any[]>('/api/v1/protocols/');
+    console.log(`Received ${protocols?.length || 0} available protocols`);
+    return protocols || [];
+  } catch (error) {
+    console.error('Error fetching available protocols:', error);
+    return []; // Return empty array on error
+  }
 }
 
 export async function getUserProtocols(): Promise<any[]> {
-  return authenticatedRequest<any[]>('/api/v1/user-protocols/');
+  console.log('Fetching user protocols');
+  try {
+    const protocols = await authenticatedRequest<any[]>('/api/v1/user-protocols/');
+    console.log(`Received ${protocols?.length || 0} user protocols`);
+    return protocols || [];
+  } catch (error) {
+    console.error('Error fetching user protocols:', error);
+    return []; // Return empty array on error
+  }
 }
 
 export async function getActiveProtocols(): Promise<any[]> {
@@ -369,6 +393,43 @@ export async function getActiveProtocols(): Promise<any[]> {
     console.error('Error fetching active protocols:', error);
     return []; // Return empty array on error
   }
+}
+
+export async function enrollInProtocol(protocolId: string): Promise<any> {
+  console.log(`Enrolling in protocol: ${protocolId}`);
+  const enrollmentData = {
+    protocol_id: protocolId
+  };
+  return authenticatedRequest<any>('/api/v1/user-protocols/enroll', 'POST', enrollmentData);
+}
+
+export async function getProtocolDetails(protocolId: string): Promise<any> {
+  console.log(`Fetching details for protocol: ${protocolId}`);
+  return authenticatedRequest<any>(`/api/v1/protocols/${protocolId}`);
+}
+
+export async function getUserProtocolDetails(userProtocolId: string): Promise<any> {
+  console.log(`Fetching details for user protocol: ${userProtocolId}`);
+  try {
+    const endpoint = `/api/v1/user-protocols/${userProtocolId}`;
+    console.log(`Making request to: ${endpoint}`);
+    const result = await authenticatedRequest<any>(endpoint);
+    console.log(`Received user protocol details:`, JSON.stringify(result, null, 2));
+    return result;
+  } catch (error) {
+    console.error(`Error fetching user protocol details:`, error);
+    throw error;
+  }
+}
+
+export async function getProtocolEffectiveness(protocolId: string): Promise<any> {
+  console.log(`Fetching effectiveness for protocol: ${protocolId}`);
+  return authenticatedRequest<any>(`/api/v1/protocols/${protocolId}/effectiveness-metrics`);
+}
+
+export async function getUserProtocolProgress(userProtocolId: string): Promise<any> {
+  console.log(`Fetching progress for user protocol: ${userProtocolId}`);
+  return authenticatedRequest<any>(`/api/v1/user-protocols/${userProtocolId}/progress`);
 }
 
 // Function to check if the 'me' endpoint works, which indicates if the API is properly configured
