@@ -45,7 +45,9 @@ export default function NetworkCheckScreen() {
       setIsConnected(connected);
       
       if (!connected) {
-        setErrorDetails('Connected to API but authentication failed. You may need to log in again.');
+        setErrorDetails('Connected to API but authentication endpoints are not available. You may need to check your backend configuration.');
+      } else {
+        console.log('Network check: API connectivity successful');
       }
     } catch (error) {
       setIsConnected(false);
@@ -120,7 +122,10 @@ export default function NetworkCheckScreen() {
           3. Ensure your device and computer are on the same network
         </ThemedText>
         <ThemedText style={styles.troubleshootingText}>
-          4. Try using ngrok for external access (see API_SETUP.md)
+          4. Check that the API endpoints are correct (/api/v1/docs, not /docs)
+        </ThemedText>
+        <ThemedText style={styles.troubleshootingText}>
+          5. Try using ngrok for external access (see API_SETUP.md)
         </ThemedText>
       </ThemedView>
 

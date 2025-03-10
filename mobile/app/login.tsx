@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, Text } from 'react-native';
+import { 
+  StyleSheet, 
+  TextInput, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Alert, 
+  Text, 
+  View,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
+} from 'react-native';
 import { router, useNavigation } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -12,6 +26,18 @@ export default function LoginScreen() {
   const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
   const navigation = useNavigation();
   const [networkError, setNetworkError] = useState<string | null>(null);
+  
+  // Animation values
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  // Start animations when component mounts
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   // Clear errors when component unmounts
   useEffect(() => {
@@ -45,8 +71,10 @@ export default function LoginScreen() {
           setNetworkError('Connected to API but authentication endpoints are not available. Please check your backend configuration.');
         } else {
           setNetworkError(null);
+          console.log('API connectivity check successful');
         }
       } catch (err) {
+        console.error('Error checking API connectivity:', err);
         setNetworkError('Error checking API connectivity. Please check your network settings.');
       }
     };
@@ -80,139 +108,217 @@ export default function LoginScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Isidor</ThemedText>
-        <ThemedText style={styles.subtitle}>AI-Driven Life Protocol System</ThemedText>
-      </ThemedView>
-
-      <ThemedView style={styles.form}>
-        <ThemedText type="subtitle">Login</ThemedText>
-        
-        {error && (
-          <ThemedView style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
-          </ThemedView>
-        )}
-
-        {networkError && (
-          <ThemedView style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>{networkError}</ThemedText>
-            <TouchableOpacity onPress={goToNetworkCheck}>
-              <ThemedText style={styles.linkText}>Check Network Settings</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-        )}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!isLoading}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!isLoading}
-        />
-
-        <TouchableOpacity 
-          style={[styles.button, isLoading && styles.buttonDisabled]} 
-          onPress={handleLogin}
-          disabled={isLoading}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#f8fafc', '#f1f5f9']}
+        style={styles.gradient}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.contentWrapper}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.View 
+              style={[
+                styles.content,
+                { opacity: fadeAnim }
+              ]}
+            >
+              <Text style={styles.title}>isidor</Text>
+              
+              <Text style={styles.subtitle}>
+                AI-powered protocols for human optimization
+              </Text>
+              
+              <Text style={styles.secondarySubtitle}>
+                Powered by data, controlled by you
+              </Text>
 
-        <TouchableOpacity 
-          style={styles.networkCheckButton} 
-          onPress={goToNetworkCheck}
-        >
-          <ThemedText style={styles.networkCheckText}>Network Connectivity Check</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
-    </ThemedView>
+              <View style={styles.formContainer}>
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+
+                {networkError && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{networkError}</Text>
+                    <TouchableOpacity onPress={goToNetworkCheck}>
+                      <Text style={styles.linkText}>Check Network Settings</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    editable={!isLoading}
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    editable={!isLoading}
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.button, isLoading && styles.buttonDisabled]} 
+                  onPress={handleLogin}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Login</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.networkCheckButton} 
+                  onPress={goToNetworkCheck}
+                >
+                  <Text style={styles.networkCheckText}>Network Connectivity Check</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
+
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
-  header: {
+  gradient: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  contentWrapper: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  content: {
     alignItems: 'center',
-    marginBottom: 48,
-    marginTop: 80,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  title: {
+    fontSize: 64,
+    fontWeight: '200',
+    color: '#1e293b',
+    marginBottom: 16,
+    letterSpacing: 1,
   },
   subtitle: {
-    marginTop: 8,
+    fontSize: 18,
+    color: '#334155',
+    fontWeight: '300',
     textAlign: 'center',
+    marginBottom: 4,
   },
-  form: {
-    padding: 16,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  secondarySubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '300',
+    textAlign: 'center',
+    marginBottom: 40,
   },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#0a7ea4',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  buttonDisabled: {
-    backgroundColor: '#7fbfd1',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  formContainer: {
+    width: '100%',
+    maxWidth: 320,
   },
   errorContainer: {
-    backgroundColor: '#ffebee',
-    padding: 10,
-    borderRadius: 4,
+    width: '100%',
+    backgroundColor: 'rgba(254, 226, 226, 0.8)',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
   },
   errorText: {
-    color: '#d32f2f',
+    color: '#b91c1c',
+    fontSize: 14,
   },
   linkText: {
-    color: '#0a7ea4',
-    textDecorationLine: 'underline',
+    color: '#2563eb',
     marginTop: 8,
+    fontSize: 14,
+  },
+  inputWrapper: {
+    marginBottom: 16,
+  },
+  input: {
+    height: 50,
+    backgroundColor: 'white',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    color: '#334155',
+    borderWidth: 1,
+    borderColor: 'rgba(203, 213, 225, 0.5)',
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  button: {
+    height: 50,
+    backgroundColor: '#334155',
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  buttonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
   networkCheckButton: {
     marginTop: 24,
+    padding: 8,
     alignItems: 'center',
   },
   networkCheckText: {
-    color: '#0a7ea4',
+    color: '#64748b',
+    fontSize: 14,
     textDecorationLine: 'underline',
   },
 }); 

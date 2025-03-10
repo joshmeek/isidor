@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "expo-font": "^13.0.4",
+    "expo-linear-gradient": "^14.0.2"
+  }
+}

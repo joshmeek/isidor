@@ -33,6 +33,9 @@ The mobile app is configured to automatically detect the appropriate API URL bas
 
 The app uses the following API endpoints:
 
+### Documentation
+- `GET /api/v1/docs` - API documentation (Swagger UI)
+
 ### Authentication
 - `POST /api/v1/auth/login` - Login and get access token
 - `POST /api/v1/auth/refresh` - Refresh access token

@@ -105,13 +105,14 @@ export async function checkApiConnectivity(): Promise<boolean> {
         console.log('API connectivity check successful via health endpoint');
         return true;
       }
+      console.log('Health endpoint not available, status:', response.status);
     } catch (error) {
       console.log('Health endpoint not available, trying docs endpoint');
     }
     
     // If health endpoint fails, try the docs endpoint which should be available in FastAPI
     try {
-      const docsResponse = await fetch(`${API_URL}/docs`, { 
+      const docsResponse = await fetch(`${API_URL}/api/v1/docs`, { 
         method: 'GET',
       });
       
@@ -119,22 +120,28 @@ export async function checkApiConnectivity(): Promise<boolean> {
         console.log('API connectivity check successful via docs endpoint');
         return true;
       }
+      console.log('Docs endpoint not available, status:', docsResponse.status);
     } catch (error) {
       console.log('Docs endpoint not available, trying root endpoint');
     }
     
     // Last resort, try the root endpoint
-    const rootResponse = await fetch(`${API_URL}/`, { 
-      method: 'GET',
-    });
-    
-    if (rootResponse.ok) {
-      console.log('API connectivity check successful via root endpoint');
-      return true;
-    } else {
+    try {
+      const rootResponse = await fetch(`${API_URL}/`, { 
+        method: 'GET',
+      });
+      
+      if (rootResponse.ok) {
+        console.log('API connectivity check successful via root endpoint');
+        return true;
+      }
       console.warn('API connectivity check failed with status:', rootResponse.status);
-      return false;
+    } catch (error) {
+      console.error('Root endpoint not available:', error);
     }
+    
+    console.error('All API connectivity checks failed');
+    return false;
   } catch (error) {
     console.error('API connectivity check failed with error:', error);
     return false;
@@ -368,10 +375,29 @@ export async function getActiveProtocols(): Promise<any[]> {
 export async function checkApiHealth(): Promise<boolean> {
   try {
     // Try to access a simple endpoint that should always work if the API is running
-    const response = await fetch(`${API_URL}/docs`, { 
+    // The docs are at /api/v1/docs, not /docs
+    const response = await fetch(`${API_URL}/api/v1/docs`, { 
       method: 'GET',
     });
-    return response.ok;
+    
+    if (response.ok) {
+      console.log('API health check successful via docs endpoint');
+      return true;
+    }
+    
+    // If docs endpoint fails, try the root endpoint as fallback
+    console.log('Docs endpoint not available, trying root endpoint');
+    const rootResponse = await fetch(`${API_URL}/`, { 
+      method: 'GET',
+    });
+    
+    if (rootResponse.ok) {
+      console.log('API health check successful via root endpoint');
+      return true;
+    }
+    
+    console.warn('API health check failed: API is not responding');
+    return false;
   } catch (error) {
     console.error('API health check failed:', error);
     return false;
