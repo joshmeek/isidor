@@ -20,6 +20,7 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { MetricCard } from './MetricCard';
 export { IconSymbol } from './IconSymbol';
+export { TextInput } from './TextInput';
 export { useBottomTabOverflow } from './TabBarBackground';
 import TabBarBackground from './TabBarBackground';
 export { TabBarBackground };

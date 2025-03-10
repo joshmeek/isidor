@@ -1,8 +1,8 @@
 /**
  * Isidor Typography System
  * 
- * A comprehensive typography system inspired by Apple Health, designed to create
- * a clean, modern, and readable interface that aligns with Isidor's vision.
+ * A comprehensive typography system inspired by the login screen, designed to create
+ * a clean, elegant, and modern interface that aligns with Isidor's vision.
  */
 
 import { Platform, TextStyle } from 'react-native';
@@ -10,18 +10,24 @@ import { Platform, TextStyle } from 'react-native';
 // Font family based on platform
 const fontFamily = Platform.select({
   ios: {
+    thin: 'System',
+    light: 'System',
     regular: 'System',
     medium: 'System',
     semibold: 'System',
     bold: 'System',
   },
   android: {
+    thin: 'sans-serif-thin',
+    light: 'sans-serif-light',
     regular: 'sans-serif',
     medium: 'sans-serif-medium',
     semibold: 'sans-serif-medium',
     bold: 'sans-serif-bold',
   },
   default: {
+    thin: 'System',
+    light: 'System',
     regular: 'System',
     medium: 'System',
     semibold: 'System',
@@ -31,6 +37,8 @@ const fontFamily = Platform.select({
 
 // Font weights - using valid React Native numeric values
 const fontWeights = {
+  thin: '200' as TextStyle['fontWeight'],
+  light: '300' as TextStyle['fontWeight'],
   regular: '400' as TextStyle['fontWeight'],
   medium: '500' as TextStyle['fontWeight'],
   semibold: '600' as TextStyle['fontWeight'],
@@ -55,6 +63,7 @@ const fontSizes = {
   '3xl': 30,
   '4xl': 36,
   '5xl': 48,
+  '6xl': 64,
 };
 
 // Letter spacing
@@ -64,54 +73,78 @@ const letterSpacing = {
   normal: 0,
   wide: 0.4,
   wider: 0.8,
+  widest: 1,
 };
 
 // Text styles with proper TypeScript typing
 export const TextStyles: Record<string, TextStyle> = {
   // Display styles (large headers)
   displayLarge: {
-    fontSize: fontSizes['5xl'],
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSizes['5xl'] * lineHeights.tight,
-    letterSpacing: letterSpacing.tight,
-    fontFamily: fontFamily.bold,
+    fontSize: fontSizes['6xl'],
+    fontWeight: fontWeights.thin,
+    lineHeight: fontSizes['6xl'] * lineHeights.tight,
+    letterSpacing: letterSpacing.normal,
+    fontFamily: fontFamily.thin,
   },
   displayMedium: {
-    fontSize: fontSizes['4xl'],
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSizes['4xl'] * lineHeights.tight,
-    letterSpacing: letterSpacing.tight,
-    fontFamily: fontFamily.bold,
+    fontSize: fontSizes['5xl'],
+    fontWeight: fontWeights.light,
+    lineHeight: fontSizes['5xl'] * lineHeights.tight,
+    letterSpacing: letterSpacing.normal,
+    fontFamily: fontFamily.light,
   },
   displaySmall: {
-    fontSize: fontSizes['3xl'],
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSizes['3xl'] * lineHeights.tight,
-    letterSpacing: letterSpacing.tight,
-    fontFamily: fontFamily.bold,
+    fontSize: fontSizes['4xl'],
+    fontWeight: fontWeights.light,
+    lineHeight: fontSizes['4xl'] * lineHeights.tight,
+    letterSpacing: letterSpacing.normal,
+    fontFamily: fontFamily.light,
   },
 
   // Heading styles
   headingLarge: {
-    fontSize: fontSizes['2xl'],
-    fontWeight: fontWeights.semibold,
-    lineHeight: fontSizes['2xl'] * lineHeights.tight,
+    fontSize: fontSizes['3xl'],
+    fontWeight: fontWeights.medium,
+    lineHeight: fontSizes['3xl'] * lineHeights.tight,
     letterSpacing: letterSpacing.normal,
-    fontFamily: fontFamily.semibold,
+    fontFamily: fontFamily.medium,
   },
   headingMedium: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
-    lineHeight: fontSizes.xl * lineHeights.tight,
+    fontSize: fontSizes['2xl'],
+    fontWeight: fontWeights.medium,
+    lineHeight: fontSizes['2xl'] * lineHeights.tight,
     letterSpacing: letterSpacing.normal,
-    fontFamily: fontFamily.semibold,
+    fontFamily: fontFamily.medium,
   },
   headingSmall: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    lineHeight: fontSizes.lg * lineHeights.tight,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.medium,
+    lineHeight: fontSizes.xl * lineHeights.tight,
     letterSpacing: letterSpacing.normal,
-    fontFamily: fontFamily.semibold,
+    fontFamily: fontFamily.medium,
+  },
+
+  // Title styles (for login screen)
+  title: {
+    fontSize: fontSizes['6xl'],
+    fontWeight: fontWeights.thin,
+    lineHeight: fontSizes['6xl'] * lineHeights.tight,
+    letterSpacing: letterSpacing.wide,
+    fontFamily: fontFamily.thin,
+  },
+  subtitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.light,
+    lineHeight: fontSizes.lg * lineHeights.normal,
+    letterSpacing: letterSpacing.normal,
+    fontFamily: fontFamily.light,
+  },
+  secondarySubtitle: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.light,
+    lineHeight: fontSizes.sm * lineHeights.normal,
+    letterSpacing: letterSpacing.normal,
+    fontFamily: fontFamily.light,
   },
 
   // Body styles
@@ -170,10 +203,10 @@ export const TextStyles: Record<string, TextStyle> = {
   },
   button: {
     fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
+    fontWeight: fontWeights.medium,
     lineHeight: fontSizes.md * lineHeights.tight,
     letterSpacing: letterSpacing.normal,
-    fontFamily: fontFamily.semibold,
+    fontFamily: fontFamily.medium,
   },
   link: {
     fontSize: fontSizes.md,
@@ -181,6 +214,7 @@ export const TextStyles: Record<string, TextStyle> = {
     lineHeight: fontSizes.md * lineHeights.normal,
     letterSpacing: letterSpacing.normal,
     fontFamily: fontFamily.medium,
+    textDecorationLine: 'underline',
   },
 };
 

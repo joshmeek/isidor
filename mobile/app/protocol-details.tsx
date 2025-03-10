@@ -48,6 +48,248 @@ export default function ProtocolDetailsScreen() {
   const successColor = useThemeColor({}, 'success') as string;
   const errorColor = useThemeColor({}, 'error') as string;
 
+  // Define styles with access to theme colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    backButton: {
+      padding: spacing.xs,
+      marginRight: spacing.sm,
+    },
+    title: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    loadingText: {
+      marginTop: spacing.md,
+    },
+    errorCard: {
+      margin: spacing.lg,
+      padding: spacing.lg,
+      alignItems: 'center',
+    },
+    errorText: {
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    contentContainer: {
+      padding: spacing.md,
+    },
+    sectionTitle: {
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    descriptionText: {
+      marginBottom: spacing.md,
+      color: secondaryColor,
+    },
+    infoCard: {
+      marginBottom: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
+    },
+    infoLabel: {
+      color: secondaryColor,
+    },
+    statusContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: spacing.xs,
+    },
+    progressContainer: {
+      marginTop: spacing.md,
+    },
+    progressBar: {
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: primaryColor,
+    },
+    progressBackground: {
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+      marginBottom: spacing.xs,
+    },
+    progressText: {
+      textAlign: 'right',
+      color: secondaryColor,
+    },
+    metricsCard: {
+      marginBottom: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    metricRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    metricIcon: {
+      marginRight: spacing.sm,
+    },
+    metricName: {
+      flex: 1,
+      color: primaryColor,
+    },
+    buttonContainer: {
+      padding: spacing.md,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
+    },
+    button: {
+      flex: 1,
+      marginHorizontal: spacing.xs,
+    },
+    completeButton: {
+      backgroundColor: successColor,
+    },
+    abandonButton: {
+      backgroundColor: errorColor,
+    },
+    buttonText: {
+      color: primaryColor,
+    },
+    chartContainer: {
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
+      height: 200,
+    },
+    chartTitle: {
+      marginBottom: spacing.sm,
+      color: primaryColor,
+    },
+    chartLegend: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: spacing.sm,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: spacing.sm,
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: spacing.xs,
+    },
+    legendText: {
+      color: secondaryColor,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.md,
+      paddingBottom: spacing['3xl'],
+    },
+    protocolCard: {
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.md,
+    },
+    protocolHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    protocolName: {
+      flex: 1,
+    },
+    statusText: {
+      marginLeft: spacing.xs,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: primaryColor,
+    },
+    progressCard: {
+      borderRadius: spacing.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    progressBarContainer: {
+      marginBottom: spacing.md,
+    },
+    daysContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: spacing.xs,
+    },
+    dayInfo: {
+      alignItems: 'center',
+    },
+    dayNumber: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: secondaryColor,
+      marginBottom: spacing.xs,
+    },
+    actionButton: {
+      flex: 1,
+      marginHorizontal: spacing.xs,
+    },
+    completedContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+    },
+    completedText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: secondaryColor,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    completedDate: {
+      fontSize: 14,
+      color: secondaryColor,
+    },
+    abandonedContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.xl,
+    },
+    abandonedText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: secondaryColor,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    abandonedDate: {
+      fontSize: 14,
+      color: secondaryColor,
+    },
+  });
+
   // Load protocol details
   useEffect(() => {
     const loadProtocolDetails = async () => {
@@ -121,6 +363,29 @@ export default function ProtocolDetailsScreen() {
     return Math.max(0, totalDays - daysPassed);
   };
 
+  // Get status color based on protocol status
+  const getStatusColor = () => {
+    if (!userProtocol) return primaryColor;
+    
+    switch (userProtocol.status) {
+      case 'completed':
+        return successColor;
+      case 'abandoned':
+        return errorColor;
+      default:
+        return primaryColor;
+    }
+  };
+
+  // Get formatted status text
+  const getStatusText = () => {
+    if (!userProtocol) return 'Active';
+    
+    // Capitalize first letter and replace underscores with spaces
+    return userProtocol.status.charAt(0).toUpperCase() + 
+           userProtocol.status.slice(1).replace(/_/g, ' ');
+  };
+
   const updateProtocolStatus = async (status: string) => {
     try {
       console.log(`Updating protocol status to: ${status}`);
@@ -152,14 +417,14 @@ export default function ProtocolDetailsScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#0066CC" />
+            <Ionicons name="chevron-back" size={24} color={primaryColor} />
           </TouchableOpacity>
-          <ThemedText variant="headingMedium" style={styles.title}>
+          <ThemedText variant="headingLarge" style={styles.title}>
             Protocol Details
           </ThemedText>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066CC" />
+          <ActivityIndicator size="large" color={primaryColor} />
           <ThemedText variant="bodyMedium" style={styles.loadingText}>
             Loading protocol details...
           </ThemedText>
@@ -173,9 +438,9 @@ export default function ProtocolDetailsScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#0066CC" />
+            <Ionicons name="chevron-back" size={24} color={primaryColor} />
           </TouchableOpacity>
-          <ThemedText variant="headingMedium" style={styles.title}>
+          <ThemedText variant="headingLarge" style={styles.title}>
             Protocol Details
           </ThemedText>
         </View>
@@ -199,9 +464,9 @@ export default function ProtocolDetailsScreen() {
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#0066CC" />
+          <Ionicons name="chevron-back" size={24} color={primaryColor} />
         </TouchableOpacity>
-        <ThemedText variant="headingMedium" style={styles.title}>
+        <ThemedText variant="headingLarge" style={styles.title}>
           Protocol Details
         </ThemedText>
       </View>
@@ -213,78 +478,34 @@ export default function ProtocolDetailsScreen() {
         {/* Protocol Header */}
         <Card style={styles.protocolCard}>
           <View style={styles.protocolHeader}>
-            <ThemedText variant="displaySmall" style={styles.protocolName}>
-              {userProtocol.protocol?.name || 'Unnamed Protocol'}
+            <ThemedText variant="headingMedium" style={styles.protocolName}>
+              {userProtocol.protocol?.name || 'Unknown Protocol'}
             </ThemedText>
-            <View style={[
-              styles.statusBadge, 
-              { 
-                backgroundColor: 
-                  userProtocol.status === 'completed' ? successColor :
-                  userProtocol.status === 'abandoned' ? errorColor : 
-                  primaryColor 
-              }
-            ]}>
-              <ThemedText variant="labelSmall" style={styles.statusText}>
-                {userProtocol.status.replace('_', ' ').toUpperCase()}
-              </ThemedText>
-            </View>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+            <ThemedText variant="bodyMedium" style={styles.statusText}>
+              {getStatusText()}
+            </ThemedText>
           </View>
-
-          <ThemedText variant="bodyMedium" style={styles.protocolDescription}>
+          
+          <ThemedText variant="bodyMedium" style={styles.descriptionText}>
             {userProtocol.protocol?.description || 'No description available'}
           </ThemedText>
-
-          {/* Protocol Details */}
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailRow}>
-              <ThemedText variant="labelMedium" style={styles.detailLabel}>
-                Started:
-              </ThemedText>
-              <ThemedText variant="bodyMedium">
-                {new Date(userProtocol.start_date).toLocaleDateString()}
+          
+          {userProtocol.protocol?.duration_type === 'fixed' && (
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBackground}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { width: `${calculateProgress() * 100}%` }
+                  ]} 
+                />
+              </View>
+              <ThemedText variant="bodySmall" style={styles.progressText}>
+                {calculateDaysPassed()} days completed / {calculateDaysLeft()} days left
               </ThemedText>
             </View>
-            
-            {userProtocol.end_date && (
-              <View style={styles.detailRow}>
-                <ThemedText variant="labelMedium" style={styles.detailLabel}>
-                  Ends:
-                </ThemedText>
-                <ThemedText variant="bodyMedium">
-                  {new Date(userProtocol.end_date).toLocaleDateString()}
-                </ThemedText>
-              </View>
-            )}
-            
-            {userProtocol.protocol?.duration_type === 'fixed' && (
-              <View style={styles.detailRow}>
-                <ThemedText variant="labelMedium" style={styles.detailLabel}>
-                  Duration:
-                </ThemedText>
-                <ThemedText variant="bodyMedium">
-                  {userProtocol.protocol.duration_days} days
-                </ThemedText>
-              </View>
-            )}
-            
-            {userProtocol.protocol?.target_metrics && (
-              <View style={styles.detailRow}>
-                <ThemedText variant="labelMedium" style={styles.detailLabel}>
-                  Target Metrics:
-                </ThemedText>
-                <View style={styles.metricsContainer}>
-                  {userProtocol.protocol.target_metrics.map((metric, index) => (
-                    <View key={index} style={styles.metricBadge}>
-                      <ThemedText variant="labelSmall" style={styles.metricText}>
-                        {metric.replace('_', ' ').toUpperCase()}
-                      </ThemedText>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
+          )}
         </Card>
 
         {/* Progress Section */}
@@ -379,213 +600,4 @@ export default function ProtocolDetailsScreen() {
       </ScrollView>
     </ThemedView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  backButton: {
-    marginRight: spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    paddingBottom: spacing['3xl'],
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    color: '#667085',
-    textAlign: 'center',
-  },
-  errorCard: {
-    margin: spacing.md,
-    padding: spacing.lg,
-    borderRadius: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  errorText: {
-    marginBottom: spacing.md,
-    textAlign: 'center',
-    color: '#667085',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  protocolCard: {
-    borderRadius: spacing.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    backgroundColor: '#FFFFFF',
-  },
-  protocolHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  protocolName: {
-    fontSize: 22,
-    fontWeight: '700',
-    flex: 1,
-    color: '#000000',
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: spacing.md,
-    marginLeft: spacing.sm,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  protocolDescription: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#333333',
-    marginBottom: spacing.md,
-  },
-  detailsContainer: {
-    marginBottom: spacing.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: spacing.sm,
-    color: '#667085',
-    width: 100,
-  },
-  metricsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  metricBadge: {
-    backgroundColor: 'rgba(0, 102, 204, 0.1)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: spacing.sm,
-  },
-  metricText: {
-    color: '#0066CC',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  progressCard: {
-    borderRadius: spacing.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    backgroundColor: '#FFFFFF',
-  },
-  progressBarContainer: {
-    marginBottom: spacing.md,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(0, 102, 204, 0.1)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#0066CC',
-  },
-  progressText: {
-    marginTop: spacing.xs,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333333',
-    textAlign: 'right',
-  },
-  daysContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  dayInfo: {
-    alignItems: 'center',
-  },
-  dayNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: spacing.xs,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
-  },
-  completedContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  completedText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  completedDate: {
-    fontSize: 14,
-    color: '#667085',
-  },
-  abandonedContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  abandonedText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  abandonedDate: {
-    fontSize: 14,
-    color: '#667085',
-  },
-}); 
+} 

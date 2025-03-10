@@ -1,9 +1,9 @@
 import React from 'react';
-import { Tabs, usePathname } from 'expo-router';
-import { useColorScheme, Platform, StyleSheet, View } from 'react-native';
+import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { spacing } from '@/constants/Spacing';
+import { Platform, StyleSheet } from 'react-native';
+import { TabBarBackground } from '@/components/ui';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Tab bar icon component
 function TabBarIcon(props: {
@@ -11,48 +11,38 @@ function TabBarIcon(props: {
   color: string;
   size?: number;
 }) {
-  const { size = 24, ...rest } = props;
-  return <Ionicons size={size} style={{ marginBottom: -3 }} {...rest} />;
+  return <Ionicons size={props.size || 24} style={{ marginBottom: -3 }} {...props} />;
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const pathname = usePathname();
-  
-  console.log('TabLayout rendering, current path:', pathname);
-
-  // Get colors from theme
-  const colors = Colors[colorScheme as 'light' | 'dark'];
-  const tabBackground = colors.tabBackground;
-  const tabActiveTintColor = colors.primary;
-  const tabInactiveTintColor = colors.tabIconDefault;
+  // Get theme colors
+  const tabBackground = useThemeColor({}, 'tabBackground') as string;
+  const tabIconDefault = useThemeColor({}, 'tabIconDefault') as string;
+  const tabIconSelected = useThemeColor({}, 'tabIconSelected') as string;
+  const cardBorder = useThemeColor({}, 'cardBorder') as string;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: tabActiveTintColor,
-        tabBarInactiveTintColor: tabInactiveTintColor,
+        tabBarActiveTintColor: tabIconSelected,
+        tabBarInactiveTintColor: tabIconDefault,
         tabBarStyle: {
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-          height: 88,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 5,
-          paddingTop: 10,
-          backgroundColor: tabBackground,
           position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: cardBorder,
+          backgroundColor: tabBackground,
+          height: 88,
+          paddingBottom: 34,
+          paddingTop: 8,
           ...Platform.select({
             ios: {
-              shadowColor: '#000',
+              shadowColor: 'rgba(0, 0, 0, 0.05)',
               shadowOffset: { width: 0, height: -3 },
-              shadowOpacity: 0.05,
-              shadowRadius: 6,
+              shadowOpacity: 1,
+              shadowRadius: 4,
             },
             android: {
-              elevation: 8,
+              elevation: 4,
             },
           }),
         },
@@ -99,11 +89,6 @@ export default function TabLayout() {
           ),
           tabBarLabel: 'Protocols',
         }}
-        listeners={{
-          tabPress: e => {
-            console.log('Protocols tab pressed');
-          },
-        }}
       />
       <Tabs.Screen
         name="health"
@@ -118,11 +103,6 @@ export default function TabLayout() {
           ),
           tabBarLabel: 'Health',
         }}
-        listeners={{
-          tabPress: e => {
-            console.log('Health tab pressed');
-          },
-        }}
       />
       <Tabs.Screen
         name="profile"
@@ -136,11 +116,6 @@ export default function TabLayout() {
             />
           ),
           tabBarLabel: 'Profile',
-        }}
-        listeners={{
-          tabPress: e => {
-            console.log('Profile tab pressed');
-          },
         }}
       />
     </Tabs>

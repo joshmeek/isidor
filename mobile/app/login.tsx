@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
-  TextInput, 
   TouchableOpacity, 
   ActivityIndicator, 
   Alert, 
@@ -16,6 +15,7 @@ import {
 import { router, useNavigation } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { TextInput } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -155,7 +155,6 @@ export default function LoginScreen() {
 
                 <View style={styles.inputWrapper}>
                   <TextInput
-                    style={styles.input}
                     placeholder="Email"
                     value={email}
                     onChangeText={setEmail}
@@ -163,18 +162,19 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     editable={!isLoading}
                     placeholderTextColor="#94a3b8"
+                    inputStyle={styles.customInput}
                   />
                 </View>
 
                 <View style={styles.inputWrapper}>
                   <TextInput
-                    style={styles.input}
                     placeholder="Password"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
                     editable={!isLoading}
                     placeholderTextColor="#94a3b8"
+                    inputStyle={styles.customInput}
                   />
                 </View>
 
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     marginBottom: 16,
   },
-  input: {
+  customInput: {
     height: 50,
     backgroundColor: 'white',
     borderRadius: 25,

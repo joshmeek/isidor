@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, TextInput, Alert } from 'react-native';
+import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
+import { ThemedText, ThemedView, Button, Card, MetricCard, TextInput } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
 import { spacing } from '@/constants/Spacing';
@@ -309,18 +309,13 @@ export default function HealthScreen() {
             Date
           </ThemedText>
           <View style={styles.inputContainer}>
-            <ThemedText variant="labelSmall" style={styles.inputLabel}>
-              Date (YYYY-MM-DD)
-            </ThemedText>
             <TextInput
-              style={styles.input}
+              label="Date (YYYY-MM-DD)"
               value={date}
               onChangeText={setDate}
               placeholder="YYYY-MM-DD"
+              helper="Format: YYYY-MM-DD (e.g., 2023-10-15)"
             />
-            <ThemedText variant="caption" style={styles.inputHelper}>
-              Format: YYYY-MM-DD (e.g., 2023-10-15)
-            </ThemedText>
           </View>
         </View>
         
@@ -331,11 +326,8 @@ export default function HealthScreen() {
             </ThemedText>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Duration (hours)
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Duration (hours)"
                 value={sleepDuration}
                 onChangeText={setSleepDuration}
                 placeholder="7.5"
@@ -344,11 +336,8 @@ export default function HealthScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Deep Sleep (hours)
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Deep Sleep (hours)"
                 value={deepSleep}
                 onChangeText={setDeepSleep}
                 placeholder="1.5"
@@ -357,11 +346,8 @@ export default function HealthScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                REM Sleep (hours)
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="REM Sleep (hours)"
                 value={remSleep}
                 onChangeText={setRemSleep}
                 placeholder="2.0"
@@ -370,11 +356,8 @@ export default function HealthScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Sleep Score (0-100)
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Sleep Score (0-100)"
                 value={sleepScore}
                 onChangeText={setSleepScore}
                 placeholder="85"
@@ -391,11 +374,8 @@ export default function HealthScreen() {
             </ThemedText>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Steps
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Steps"
                 value={steps}
                 onChangeText={setSteps}
                 placeholder="10000"
@@ -404,11 +384,8 @@ export default function HealthScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Active Calories
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Active Calories"
                 value={activeCalories}
                 onChangeText={setActiveCalories}
                 placeholder="350"
@@ -417,11 +394,8 @@ export default function HealthScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Active Minutes
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Active Minutes"
                 value={activeMinutes}
                 onChangeText={setActiveMinutes}
                 placeholder="45"
@@ -438,11 +412,8 @@ export default function HealthScreen() {
             </ThemedText>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Average Heart Rate (bpm)
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Average Heart Rate (bpm)"
                 value={restingHr}
                 onChangeText={setRestingHr}
                 placeholder="65"
@@ -451,11 +422,8 @@ export default function HealthScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <ThemedText variant="labelSmall" style={styles.inputLabel}>
-                Heart Rate Variability (ms)
-              </ThemedText>
               <TextInput
-                style={styles.input}
+                label="Heart Rate Variability (ms)"
                 value={hrv}
                 onChangeText={setHrv}
                 placeholder="45"
@@ -983,16 +951,15 @@ const styles = StyleSheet.create({
   formContainer: {
     padding: spacing.md,
     borderRadius: spacing.md,
-    backgroundColor: '#FFFFFF',
   },
   formSection: {
     marginBottom: spacing.lg,
   },
   formSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     marginBottom: spacing.md,
-    color: '#000',
+  },
+  inputContainer: {
+    marginBottom: spacing.md,
   },
   metricTypeSelector: {
     flexDirection: 'row',
@@ -1019,29 +986,6 @@ const styles = StyleSheet.create({
   },
   metricTypeButtonTextActive: {
     color: '#fff',
-  },
-  inputContainer: {
-    marginBottom: spacing.md,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: spacing.xs,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E4E7EC',
-    borderRadius: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  inputHelper: {
-    fontSize: 12,
-    marginTop: spacing.xs,
-    color: '#98A2B3',
   },
   buttonContainer: {
     marginTop: spacing.lg,

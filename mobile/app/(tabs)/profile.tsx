@@ -15,12 +15,154 @@ export default function ProfileScreen() {
   const primaryColor = useThemeColor({}, 'primary') as string;
   const secondaryColor = useThemeColor({}, 'secondary') as string;
   const backgroundColor = useThemeColor({}, 'backgroundSecondary') as string;
+  const errorColor = useThemeColor({}, 'error') as string;
   
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [healthKitSync, setHealthKitSync] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [aiInteraction, setAiInteraction] = useState('balanced');
+
+  // Define styles with access to theme colors
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.md,
+      paddingBottom: spacing['3xl'],
+    },
+    title: {
+      marginBottom: spacing.md,
+      marginTop: spacing.lg,
+    },
+    userInfoCard: {
+      marginBottom: spacing.md,
+      borderRadius: spacing.md,
+      padding: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    userInfoContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    avatarContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: primaryColor,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
+    avatarText: {
+      color: 'white',
+      fontSize: 24,
+    },
+    userDetails: {
+      flex: 1,
+    },
+    userName: {
+      marginBottom: spacing.xs,
+    },
+    userEmail: {
+      fontSize: 14,
+    },
+    sectionTitle: {
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    settingsCard: {
+      marginBottom: spacing.md,
+      borderRadius: spacing.md,
+      padding: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+    },
+    settingLabelContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    settingLabel: {
+      marginLeft: spacing.sm,
+    },
+    aiCard: {
+      marginBottom: spacing.md,
+      borderRadius: spacing.md,
+      padding: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    aiDescription: {
+      marginBottom: spacing.md,
+    },
+    aiLevelsContainer: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+    },
+    aiLevelButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xs,
+      borderRadius: spacing.sm,
+      borderWidth: 1,
+      borderColor: primaryColor,
+      backgroundColor: backgroundColor,
+      marginHorizontal: spacing.xs,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    aiLevelButtonActive: {
+      backgroundColor: primaryColor,
+    },
+    aiLevelButtonText: {
+      color: primaryColor,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    aiLevelButtonTextActive: {
+      color: 'white',
+    },
+    aiLevelDescription: {
+      textAlign: 'center',
+      marginTop: spacing.sm,
+    },
+    aiLevelDescriptionActive: {
+      color: 'white',
+    },
+    logoutButton: {
+      marginTop: spacing.md,
+      backgroundColor: errorColor,
+    },
+    accountCard: {
+      marginBottom: spacing.md,
+      borderRadius: spacing.md,
+      padding: spacing.md,
+      backgroundColor: backgroundColor,
+    },
+    footerContainer: {
+      marginTop: spacing.xl,
+      alignItems: 'center',
+    },
+    appInfo: {
+      alignItems: 'center',
+      marginTop: spacing.xl,
+    },
+    appVersion: {
+      marginBottom: spacing.xs,
+      color: secondaryColor,
+    },
+    appCopyright: {
+      color: secondaryColor,
+    },
+  });
 
   // Handle logout
   const handleLogout = () => {
@@ -271,152 +413,4 @@ export default function ProfileScreen() {
       </ScrollView>
     </ThemedView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    paddingBottom: spacing['3xl'],
-  },
-  title: {
-    marginBottom: spacing.md,
-    marginTop: spacing.lg,
-  },
-  userInfoCard: {
-    marginBottom: spacing.md,
-    borderRadius: spacing.md,
-    padding: spacing.md,
-    backgroundColor: '#FFFFFF',
-  },
-  userInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#0066CC',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#667085',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  settingsCard: {
-    marginBottom: spacing.md,
-    borderRadius: spacing.md,
-    padding: 0,
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  settingLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  settingLabel: {
-    marginLeft: spacing.sm,
-    fontSize: 16,
-  },
-  aiCard: {
-    marginBottom: spacing.md,
-    borderRadius: spacing.md,
-    padding: spacing.md,
-    backgroundColor: '#FFFFFF',
-  },
-  aiDescription: {
-    marginBottom: spacing.md,
-    color: '#667085',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  aiLevelsContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  aiLevelButton: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.md,
-    borderRadius: spacing.md,
-    borderWidth: 1.5,
-    borderColor: '#0066CC',
-    backgroundColor: '#FFFFFF',
-  },
-  aiLevelButtonActive: {
-    backgroundColor: '#0066CC',
-  },
-  aiLevelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0066CC',
-    marginTop: spacing.xs,
-  },
-  aiLevelButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  aiLevelDescription: {
-    fontSize: 12,
-    color: '#667085',
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  aiLevelDescriptionActive: {
-    color: '#FFFFFF',
-  },
-  accountCard: {
-    marginBottom: spacing.md,
-    borderRadius: spacing.md,
-    padding: spacing.md,
-    backgroundColor: '#FFFFFF',
-  },
-  appInfo: {
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  appVersion: {
-    fontSize: 12,
-    color: '#667085',
-  },
-  appCopyright: {
-    fontSize: 12,
-    color: '#667085',
-    marginTop: spacing.xs,
-  },
-}); 
+} 

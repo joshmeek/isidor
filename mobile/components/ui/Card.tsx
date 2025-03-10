@@ -41,10 +41,6 @@ export function Card({
 }: CardProps) {
   // Default card props
   const cardProps = {
-    card: true,
-    shadow: 'sm' as const,
-    radius: 'lg' as const,
-    padding: 'none' as const,
     ...rest,
   };
 
@@ -54,7 +50,13 @@ export function Card({
 
   return (
     <Wrapper {...wrapperProps} style={({ pressed }) => [pressed && styles.pressed]}>
-      <ThemedView style={[styles.card, style]} {...cardProps}>
+      <ThemedView 
+        style={[
+          styles.card, 
+          style
+        ]} 
+        {...cardProps}
+      >
         {/* Card Header */}
         {(title || subtitle || leftIcon || rightContent) && (
           <View style={styles.header}>
@@ -95,18 +97,22 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     overflow: 'hidden',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: spacing.md,
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   pressed: {
     opacity: 0.9,
-    transform: [{ scale: 0.995 }],
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    marginBottom: spacing.sm,
   },
   leftIcon: {
     marginRight: spacing.sm,
@@ -115,7 +121,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '500',
   },
   subtitle: {
     marginTop: 2,
@@ -124,11 +131,9 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   content: {
-    padding: spacing.md,
+    marginVertical: 0,
   },
   footer: {
-    padding: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    marginTop: spacing.md,
   },
 }); 

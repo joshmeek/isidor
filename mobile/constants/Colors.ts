@@ -1,78 +1,78 @@
 /**
  * Isidor Color System
  * 
- * A sophisticated color system inspired by Apple Health, designed to create
- * a clean, modern, and futuristic interface that aligns with Isidor's vision.
+ * A sophisticated color system inspired by the login screen, designed to create
+ * a clean, elegant, and modern interface that aligns with Isidor's vision.
  */
 
-// Primary brand color
-const primaryLight = '#0066CC'; // Apple Health-like blue
-const primaryDark = '#0A84FF';
+// Primary brand color - slate colors from login screen
+const primaryLight = '#334155'; // Slate-700
+const primaryDark = '#475569'; // Slate-600
 
 // Secondary colors
-const secondaryLight = '#5E5CE6'; // Purple for protocols
-const secondaryDark = '#5E5CE6';
+const secondaryLight = '#1e293b'; // Slate-800
+const secondaryDark = '#334155'; // Slate-700
 
 // Success colors
-const successLight = '#34C759';
-const successDark = '#30D158';
+const successLight = '#10b981'; // Emerald-500
+const successDark = '#34d399'; // Emerald-400
 
 // Warning colors
-const warningLight = '#FF9500';
-const warningDark = '#FF9F0A';
+const warningLight = '#f59e0b'; // Amber-500
+const warningDark = '#fbbf24'; // Amber-400
 
 // Error colors
-const errorLight = '#FF3B30';
-const errorDark = '#FF453A';
+const errorLight = '#b91c1c'; // Red-700
+const errorDark = '#ef4444'; // Red-500
 
-// Neutral colors
+// Neutral colors - based on the slate palette from login screen
 const neutralLight = {
-  50: '#F9FAFB',
-  100: '#F2F4F7',
-  200: '#E4E7EC',
-  300: '#D0D5DD',
-  400: '#98A2B3',
-  500: '#667085',
-  600: '#475467',
-  700: '#344054',
-  800: '#1D2939',
-  900: '#101828',
+  50: '#f8fafc', // Slate-50
+  100: '#f1f5f9', // Slate-100
+  200: '#e2e8f0', // Slate-200
+  300: '#cbd5e1', // Slate-300
+  400: '#94a3b8', // Slate-400
+  500: '#64748b', // Slate-500
+  600: '#475569', // Slate-600
+  700: '#334155', // Slate-700
+  800: '#1e293b', // Slate-800
+  900: '#0f172a', // Slate-900
 };
 
 const neutralDark = {
-  50: '#1C1C1E',
-  100: '#2C2C2E',
-  200: '#3A3A3C',
-  300: '#48484A',
-  400: '#636366',
-  500: '#8E8E93',
-  600: '#AEAEB2',
-  700: '#C7C7CC',
-  800: '#E5E5EA',
-  900: '#F2F2F7',
+  50: '#1e293b', // Slate-800
+  100: '#334155', // Slate-700
+  200: '#475569', // Slate-600
+  300: '#64748b', // Slate-500
+  400: '#94a3b8', // Slate-400
+  500: '#cbd5e1', // Slate-300
+  600: '#e2e8f0', // Slate-200
+  700: '#f1f5f9', // Slate-100
+  800: '#f8fafc', // Slate-50
+  900: '#ffffff', // White
 };
 
 // Chart colors (for data visualization)
 const chartColorsLight = [
-  '#FF9500', // Orange
-  '#FF2D55', // Pink
-  '#5856D6', // Indigo
-  '#007AFF', // Blue
-  '#34C759', // Green
-  '#AF52DE', // Purple
-  '#FF3B30', // Red
-  '#5AC8FA', // Light Blue
+  '#64748b', // Slate-500
+  '#3b82f6', // Blue-500
+  '#8b5cf6', // Violet-500
+  '#ec4899', // Pink-500
+  '#10b981', // Emerald-500
+  '#f59e0b', // Amber-500
+  '#ef4444', // Red-500
+  '#06b6d4', // Cyan-500
 ];
 
 const chartColorsDark = [
-  '#FF9F0A', // Orange
-  '#FF375F', // Pink
-  '#5E5CE6', // Indigo
-  '#0A84FF', // Blue
-  '#30D158', // Green
-  '#BF5AF2', // Purple
-  '#FF453A', // Red
-  '#64D2FF', // Light Blue
+  '#94a3b8', // Slate-400
+  '#60a5fa', // Blue-400
+  '#a78bfa', // Violet-400
+  '#f472b6', // Pink-400
+  '#34d399', // Emerald-400
+  '#fbbf24', // Amber-400
+  '#f87171', // Red-400
+  '#22d3ee', // Cyan-400
 ];
 
 export const Colors = {
@@ -85,22 +85,35 @@ export const Colors = {
     error: errorLight,
     
     // Text colors
-    text: neutralLight[900],
+    text: neutralLight[800],
     textSecondary: neutralLight[600],
     textTertiary: neutralLight[400],
     
     // Background colors
-    background: '#FFFFFF',
-    backgroundSecondary: neutralLight[50],
-    backgroundTertiary: neutralLight[100],
+    background: neutralLight[50],
+    backgroundSecondary: neutralLight[100],
+    backgroundTertiary: '#ffffff',
     
     // Card and UI element colors
-    card: '#FFFFFF',
+    card: '#ffffff',
     cardBorder: neutralLight[200],
     divider: neutralLight[200],
     
+    // Input colors
+    inputBackground: '#ffffff',
+    inputBorder: 'rgba(203, 213, 225, 0.5)',
+    inputText: neutralLight[700],
+    inputPlaceholder: neutralLight[400],
+    
+    // Button colors
+    buttonPrimary: neutralLight[700],
+    buttonSecondary: neutralLight[200],
+    buttonDisabled: neutralLight[400],
+    buttonText: '#ffffff',
+    buttonTextSecondary: neutralLight[700],
+    
     // Tab bar colors
-    tabBackground: 'rgba(255, 255, 255, 0.92)',
+    tabBackground: 'rgba(248, 250, 252, 0.92)', // Slate-50 with opacity
     tabIconDefault: neutralLight[500],
     tabIconSelected: primaryLight,
     
@@ -120,22 +133,35 @@ export const Colors = {
     error: errorDark,
     
     // Text colors
-    text: neutralDark[900],
-    textSecondary: neutralDark[700],
-    textTertiary: neutralDark[600],
+    text: neutralDark[800],
+    textSecondary: neutralDark[600],
+    textTertiary: neutralDark[400],
     
     // Background colors
-    background: '#000000',
-    backgroundSecondary: neutralDark[50],
-    backgroundTertiary: neutralDark[100],
+    background: neutralDark[50],
+    backgroundSecondary: neutralDark[100],
+    backgroundTertiary: neutralDark[200],
     
     // Card and UI element colors
-    card: neutralDark[50],
-    cardBorder: neutralDark[200],
-    divider: neutralDark[200],
+    card: neutralDark[200],
+    cardBorder: neutralDark[300],
+    divider: neutralDark[300],
+    
+    // Input colors
+    inputBackground: neutralDark[200],
+    inputBorder: neutralDark[300],
+    inputText: neutralDark[800],
+    inputPlaceholder: neutralDark[500],
+    
+    // Button colors
+    buttonPrimary: neutralDark[600],
+    buttonSecondary: neutralDark[400],
+    buttonDisabled: neutralDark[300],
+    buttonText: neutralDark[50],
+    buttonTextSecondary: neutralDark[800],
     
     // Tab bar colors
-    tabBackground: 'rgba(0, 0, 0, 0.92)',
+    tabBackground: 'rgba(30, 41, 59, 0.92)', // Slate-800 with opacity
     tabIconDefault: neutralDark[500],
     tabIconSelected: primaryDark,
     
