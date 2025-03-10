@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 router = APIRouter()
 
 # OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 # Dependency to get the current user

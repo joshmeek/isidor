@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from app.api.endpoints.auth import get_current_active_user
@@ -17,7 +17,11 @@ from app.services.user_protocol import (
     enroll_user_in_protocol,
     get_active_user_protocols,
     get_user_protocol,
+    get_user_protocol_ai_adjustments,
+    get_user_protocol_ai_analysis,
+    get_user_protocol_effectiveness,
     get_user_protocol_progress,
+    get_user_protocol_recommendations,
     get_user_protocols,
     update_user_protocol,
     update_user_protocol_status,
@@ -177,3 +181,106 @@ def get_progress(
         raise HTTPException(status_code=404, detail="Failed to get protocol progress")
 
     return progress
+
+
+@router.get("/{user_protocol_id}/effectiveness", response_model=Dict[str, Any])
+def get_effectiveness(
+    *,
+    db: Session = Depends(get_db),
+    user_protocol_id: UUID,
+    evaluation_period_days: int = Query(7, ge=1, le=90),
+    current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
+    """
+    Get effectiveness metrics for a user protocol.
+
+    This endpoint provides rule-based effectiveness metrics for the protocol,
+    comparing baseline metrics before the protocol started with recent metrics.
+    """
+    user_protocol = get_user_protocol(db=db, user_protocol_id=user_protocol_id)
+    if not user_protocol:
+        raise HTTPException(status_code=404, detail="User protocol not found")
+
+    # Check if the protocol belongs to the current user
+    if user_protocol.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this protocol")
+
+    effectiveness = get_user_protocol_effectiveness(db=db, user_protocol_id=user_protocol_id, evaluation_period_days=evaluation_period_days)
+
+    return effectiveness
+
+
+@router.get("/{user_protocol_id}/recommendations", response_model=Dict[str, Any])
+def get_recommendations(
+    *, db: Session = Depends(get_db), user_protocol_id: UUID, current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
+    """
+    Get rule-based recommendations for protocol adjustments.
+
+    This endpoint provides recommendations for adjusting the protocol based on
+    effectiveness metrics, using a rule-based approach.
+    """
+    user_protocol = get_user_protocol(db=db, user_protocol_id=user_protocol_id)
+    if not user_protocol:
+        raise HTTPException(status_code=404, detail="User protocol not found")
+
+    # Check if the protocol belongs to the current user
+    if user_protocol.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this protocol")
+
+    recommendations = get_user_protocol_recommendations(db=db, user_protocol_id=user_protocol_id)
+
+    return recommendations
+
+
+@router.get("/{user_protocol_id}/ai-analysis", response_model=Dict[str, Any])
+async def get_ai_analysis(
+    *, db: Session = Depends(get_db), user_protocol_id: UUID, current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
+    """
+    Get AI-powered analysis of protocol effectiveness.
+
+    This endpoint provides an in-depth analysis of protocol effectiveness using
+    Gemini AI, offering research-backed insights and pattern recognition.
+    """
+    user_protocol = get_user_protocol(db=db, user_protocol_id=user_protocol_id)
+    if not user_protocol:
+        raise HTTPException(status_code=404, detail="User protocol not found")
+
+    # Check if the protocol belongs to the current user
+    if user_protocol.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this protocol")
+
+    analysis = await get_user_protocol_ai_analysis(db=db, user_protocol_id=user_protocol_id)
+
+    if "error" in analysis:
+        raise HTTPException(status_code=404, detail=analysis["error"])
+
+    return analysis
+
+
+@router.get("/{user_protocol_id}/ai-adjustments", response_model=Dict[str, Any])
+async def get_ai_adjustments(
+    *, db: Session = Depends(get_db), user_protocol_id: UUID, current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
+    """
+    Get AI-powered protocol adjustment recommendations.
+
+    This endpoint provides personalized, research-backed recommendations for
+    adjusting the protocol using Gemini AI, offering more nuanced and
+    context-aware suggestions than the rule-based approach.
+    """
+    user_protocol = get_user_protocol(db=db, user_protocol_id=user_protocol_id)
+    if not user_protocol:
+        raise HTTPException(status_code=404, detail="User protocol not found")
+
+    # Check if the protocol belongs to the current user
+    if user_protocol.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this protocol")
+
+    adjustments = await get_user_protocol_ai_adjustments(db=db, user_protocol_id=user_protocol_id)
+
+    if "error" in adjustments:
+        raise HTTPException(status_code=404, detail=adjustments["error"])
+
+    return adjustments

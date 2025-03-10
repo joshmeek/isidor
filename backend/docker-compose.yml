@@ -43,7 +43,7 @@ services:
       - EMBEDDING_DIMENSION=384
       - SIMILARITY_THRESHOLD=0.7
       - GEMINI_API_KEY=AIzaSyDfSV8yI0DM0UfmH2ZMRfQGleEkR9J8J9I
-      - GEMINI_MODEL=gemini-1.5-pro
+      - GEMINI_MODEL=gemini-2.0-flash
     volumes:
       - ./:/app/
     networks:

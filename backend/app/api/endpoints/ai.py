@@ -25,7 +25,7 @@ class ProtocolRecommendationRequest(BaseModel):
 
 class TrendAnalysisRequest(BaseModel):
     metric_type: str
-    time_period: str = "last_month"
+    time_period: str = "last_month"  # Options: "last_week", "last_month", "last_3_months", "last_6_months", "last_year"
 
 
 @router.post("/insights/{user_id}", response_model=Dict[str, Any])
@@ -38,6 +38,11 @@ async def get_health_insight(
 ) -> Any:
     """
     Generate a health insight using Gemini AI with RAG.
+
+    Returns a response with:
+    - response: The AI-generated insight
+    - has_data: Boolean indicating if relevant health data was found
+    - metadata: Additional information about the request and response
     """
     # Ensure the user can only access their own insights
     if user_id != current_user.id:
@@ -62,6 +67,11 @@ async def get_protocol_recommendation(
 ) -> Any:
     """
     Generate a protocol recommendation using Gemini AI.
+
+    Returns a response with:
+    - protocol_recommendation: The AI-generated protocol recommendation
+    - has_data: Boolean indicating if relevant health data was found
+    - metadata: Additional information about the request and response
     """
     # Ensure the user can only access their own protocol recommendations
     if user_id != current_user.id:
@@ -86,6 +96,11 @@ async def get_trend_analysis(
 ) -> Any:
     """
     Analyze health trends for a specific metric using Gemini AI.
+
+    Returns a response with:
+    - trend_analysis: The AI-generated trend analysis
+    - has_data: Boolean indicating if relevant health data was found
+    - metadata: Additional information about the request and response
     """
     # Ensure the user can only access their own trend analysis
     if user_id != current_user.id:

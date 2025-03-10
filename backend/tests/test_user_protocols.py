@@ -2,25 +2,27 @@ import json
 import os
 import uuid
 from datetime import date, datetime, timedelta
+from typing import Dict, Optional
 
 import requests
 
 # Base URL for the API
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = "http://localhost:8000/api/v1"
 
 # Test user credentials
 TEST_EMAIL = f"test_user_protocol_{uuid.uuid4()}@example.com"
 TEST_PASSWORD = "testpassword123"
 TEST_USER_ID = None
 
-# Tokens
+# Authentication tokens
 ACCESS_TOKEN = None
+REFRESH_TOKEN = None
 
 # Test protocol data
 TEST_PROTOCOL_ID = None
 TEST_PROTOCOL = {
-    "name": "Test Protocol for User Enrollment",
-    "description": "A test protocol for user protocol API testing",
+    "name": "Test Protocol",
+    "description": "A test protocol for user protocol testing",
     "target_metrics": ["sleep", "activity"],
     "duration_type": "fixed",
     "duration_days": 14,

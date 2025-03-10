@@ -1,45 +1,94 @@
-from app.api.endpoints import ai, auth, health_metrics, protocols, user_protocols, users
+import os
+from typing import Dict
+
+from app.api.api import api_router
 from app.core.config import settings
-from app.middleware import add_rate_limit_middleware
+from app.middleware.rate_limiter import add_rate_limit_middleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
+# Create FastAPI app
 app = FastAPI(
     title="Isidor API",
-    description="API for Isidor, an AI-driven life protocol system",
-    version="0.1.0",
+    description="""
+    # Isidor Health Optimization API
+    
+    Isidor is an AI-driven life protocol system designed to optimize fitness, nutrition, sleep, cognitive performance, and overall well-being.
+    
+    ## Key Features
+    
+    * **Health Data Integration**: Track and analyze health metrics from various sources
+    * **Protocol System**: Follow structured frameworks for health optimization
+    * **AI-Powered Insights**: Get personalized health insights using Gemini AI
+    * **Vector Embeddings**: Utilize semantic search for finding patterns in health data
+    * **Privacy-First Design**: Secure storage of health data with encryption
+    
+    ## Authentication
+    
+    This API uses JWT-based authentication. To access protected endpoints:
+    
+    1. Obtain an access token using the `/api/v1/auth/login` endpoint
+    2. Include the token in the Authorization header: `Authorization: Bearer {token}`
+    3. Use the refresh token to obtain a new access token when it expires
+    
+    ## Rate Limiting
+    
+    API requests are rate-limited to prevent abuse. The current limit is 100 requests per hour per IP address.
+    
+    ## Data Privacy
+    
+    All sensitive health data is encrypted at rest using PostgreSQL's pgcrypto extension.
+    """,
+    version="1.0.0",
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
+    openapi_url="/api/v1/openapi.json",
 )
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,  # Use origins from settings
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Set up CORS
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-# Add rate limiting middleware
-add_rate_limit_middleware(app)
+# Add rate limiting middleware if enabled
+if settings.RATE_LIMIT_ENABLED:
+    add_rate_limit_middleware(app)
+
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Isidor API"}
+    """
+    Root endpoint that redirects to API documentation.
+    """
+    return {"message": "Welcome to Isidor API. See /api/v1/docs for documentation."}
 
 
-@app.get("/health")
+@app.get("/health", response_model=Dict[str, str])
 async def health_check():
+    """
+    Health check endpoint for monitoring.
+
+    Returns:
+        A simple JSON response indicating the API is healthy.
+
+    Example:
+        ```json
+        {
+            "status": "healthy"
+        }
+        ```
+    """
     return {"status": "healthy"}
 
-
-# Include API routers
-app.include_router(health_metrics.router, prefix="/api/health-metrics", tags=["Health Metrics"])
-app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
-app.include_router(users.router, prefix="/api/users", tags=["Users"])
-app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(protocols.router, prefix="/api/protocols", tags=["Protocols"])
-app.include_router(user_protocols.router, prefix="/api/user-protocols", tags=["User Protocols"])
 
 # Import and include other API routers as they are developed
 # from app.api.endpoints import protocols

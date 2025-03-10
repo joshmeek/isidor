@@ -2,11 +2,12 @@ import json
 import os
 import uuid
 from datetime import date, timedelta
+from typing import Dict, Optional
 
 import requests
 
 # Base URL for the API
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = "http://localhost:8000/api/v1"
 
 # Test user credentials
 TEST_USER_EMAIL = f"test_user_{uuid.uuid4()}@example.com"

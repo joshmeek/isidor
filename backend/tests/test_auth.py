@@ -1,19 +1,19 @@
 import json
 import os
 import uuid
-from datetime import datetime
+from typing import Dict, Optional
 
 import requests
 
 # Base URL for the API
-BASE_URL = "http://localhost:8000/api"
+BASE_URL = "http://localhost:8000/api/v1"
 
 # Test user credentials
 TEST_EMAIL = f"test_user_{uuid.uuid4()}@example.com"
 TEST_PASSWORD = "testpassword123"
 TEST_USER_ID = None
 
-# Tokens
+# Authentication tokens
 ACCESS_TOKEN = None
 REFRESH_TOKEN = None
 
@@ -42,8 +42,12 @@ def test_login():
 
     print("Testing login...")
 
-    # Login with test user
-    response = requests.post(f"{BASE_URL}/auth/login", data={"username": TEST_EMAIL, "password": TEST_PASSWORD})
+    # Login with the test user
+    response = requests.post(
+        f"{BASE_URL}/auth/login",
+        data={"username": TEST_EMAIL, "password": TEST_PASSWORD},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
 
     assert response.status_code == 200, f"Login failed: {response.text}"
 
@@ -51,67 +55,73 @@ def test_login():
     ACCESS_TOKEN = token_data["access_token"]
     REFRESH_TOKEN = token_data["refresh_token"]
 
-    assert ACCESS_TOKEN is not None, "Access token not received"
-    assert REFRESH_TOKEN is not None, "Refresh token not received"
+    assert ACCESS_TOKEN, "No access token returned"
+    assert REFRESH_TOKEN, "No refresh token returned"
 
     print("Login successful, tokens received")
     return True
 
 
 def test_me_endpoint():
-    """Test the /me endpoint with authentication."""
+    """Test the /me endpoint to get current user info."""
     global ACCESS_TOKEN
 
     print("Testing /me endpoint...")
 
-    # Get current user info
-    response = requests.get(f"{BASE_URL}/auth/me", headers={"Authorization": f"Bearer {ACCESS_TOKEN}"})
+    # Access the /me endpoint with the access token
+    response = requests.get(
+        f"{BASE_URL}/auth/me",
+        headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
+    )
 
-    assert response.status_code == 200, f"Failed to get user info: {response.text}"
+    assert response.status_code == 200, f"Failed to access /me endpoint: {response.text}"
 
     user_data = response.json()
     assert user_data["email"] == TEST_EMAIL, "Email in response doesn't match test user"
+    assert user_data["id"] == TEST_USER_ID, "User ID in response doesn't match test user"
 
-    print("Successfully retrieved user info")
+    print("Successfully accessed /me endpoint")
     return True
 
 
 def test_refresh_token():
-    """Test refreshing the access token."""
+    """Test refreshing the access token using the refresh token."""
     global ACCESS_TOKEN, REFRESH_TOKEN
 
     print("Testing token refresh...")
 
-    # Refresh token
-    response = requests.post(f"{BASE_URL}/auth/refresh", json={"refresh_token": REFRESH_TOKEN})
+    # Store the old access token for comparison
+    old_access_token = ACCESS_TOKEN
+
+    # Refresh the access token
+    response = requests.post(
+        f"{BASE_URL}/auth/refresh",
+        json={"refresh_token": REFRESH_TOKEN},
+    )
 
     assert response.status_code == 200, f"Token refresh failed: {response.text}"
 
     token_data = response.json()
-    new_access_token = token_data["access_token"]
-    new_refresh_token = token_data["refresh_token"]
+    ACCESS_TOKEN = token_data["access_token"]
+    REFRESH_TOKEN = token_data["refresh_token"]  # Refresh token might also be rotated
 
-    assert new_access_token is not None, "New access token not received"
-    assert new_refresh_token is not None, "New refresh token not received"
-    assert new_access_token != ACCESS_TOKEN, "New access token is the same as old one"
+    assert ACCESS_TOKEN, "No access token returned"
+    assert REFRESH_TOKEN, "No refresh token returned"
+    assert ACCESS_TOKEN != old_access_token, "New access token is the same as the old one"
 
-    # Update tokens
-    ACCESS_TOKEN = new_access_token
-    REFRESH_TOKEN = new_refresh_token
-
-    print("Successfully refreshed tokens")
+    print("Successfully refreshed access token")
     return True
 
 
 def test_change_password():
-    """Test changing user password."""
+    """Test changing the user's password."""
     global ACCESS_TOKEN, TEST_PASSWORD
 
     print("Testing password change...")
 
     new_password = f"{TEST_PASSWORD}_new"
 
-    # Change password
+    # Change the password
     response = requests.post(
         f"{BASE_URL}/auth/password-change",
         json={"current_password": TEST_PASSWORD, "new_password": new_password},
@@ -120,7 +130,7 @@ def test_change_password():
 
     assert response.status_code == 200, f"Password change failed: {response.text}"
 
-    # Update password
+    # Update the test password
     TEST_PASSWORD = new_password
 
     print("Successfully changed password")
@@ -133,14 +143,21 @@ def test_login_with_new_password():
 
     print("Testing login with new password...")
 
-    # Login with new password
-    response = requests.post(f"{BASE_URL}/auth/login", data={"username": TEST_EMAIL, "password": TEST_PASSWORD})
+    # Login with the new password
+    response = requests.post(
+        f"{BASE_URL}/auth/login",
+        data={"username": TEST_EMAIL, "password": TEST_PASSWORD},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
 
     assert response.status_code == 200, f"Login with new password failed: {response.text}"
 
     token_data = response.json()
     ACCESS_TOKEN = token_data["access_token"]
     REFRESH_TOKEN = token_data["refresh_token"]
+
+    assert ACCESS_TOKEN, "No access token returned"
+    assert REFRESH_TOKEN, "No refresh token returned"
 
     print("Successfully logged in with new password")
     return True
@@ -150,44 +167,30 @@ def cleanup():
     """Clean up by deleting the test user."""
     global TEST_USER_ID, ACCESS_TOKEN
 
-    if TEST_USER_ID:
-        print(f"Cleaning up: Deleting test user {TEST_USER_ID}...")
+    print("Cleaning up...")
 
+    if TEST_USER_ID and ACCESS_TOKEN:
         # Delete the test user
-        response = requests.delete(f"{BASE_URL}/users/{TEST_USER_ID}", headers={"Authorization": f"Bearer {ACCESS_TOKEN}"})
+        response = requests.delete(
+            f"{BASE_URL}/users/{TEST_USER_ID}",
+            headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
+        )
 
-        if response.status_code == 200:
-            print("Test user deleted successfully")
-        else:
-            print(f"Warning: Failed to delete test user: {response.text}")
+        assert response.status_code == 200, f"Failed to delete test user: {response.text}"
+        print(f"Deleted test user with ID: {TEST_USER_ID}")
+    else:
+        print("No test user to delete or missing access token")
 
 
+# Run the tests
 if __name__ == "__main__":
     try:
-        # Run tests
         user_created = test_create_user()
-
         if user_created:
-            login_success = test_login()
-            me_endpoint_success = test_me_endpoint() if login_success else False
-            refresh_success = test_refresh_token() if login_success else False
-            password_change_success = test_change_password() if login_success else False
-            new_login_success = test_login_with_new_password() if password_change_success else False
-
-            # Print summary
-            print("\nTest Summary:")
-            print(f"Create User: {'Success' if user_created else 'Failed'}")
-            print(f"Login: {'Success' if login_success else 'Failed'}")
-            print(f"Me Endpoint: {'Success' if me_endpoint_success else 'Failed'}")
-            print(f"Token Refresh: {'Success' if refresh_success else 'Failed'}")
-            print(f"Password Change: {'Success' if password_change_success else 'Failed'}")
-            print(f"Login with New Password: {'Success' if new_login_success else 'Failed'}")
-
-            if all([user_created, login_success, me_endpoint_success, refresh_success, password_change_success, new_login_success]):
-                print("\nAll authentication tests passed!")
-            else:
-                print("\nSome authentication tests failed.")
-
+            test_login()
+            test_me_endpoint()
+            test_refresh_token()
+            test_change_password()
+            test_login_with_new_password()
     finally:
-        # Clean up
         cleanup()

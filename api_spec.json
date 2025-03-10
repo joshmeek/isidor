@@ -1,0 +1,3537 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Isidor API",
+    "description": "\n    # Isidor Health Optimization API\n    \n    Isidor is an AI-driven life protocol system designed to optimize fitness, nutrition, sleep, cognitive performance, and overall well-being.\n    \n    ## Key Features\n    \n    * **Health Data Integration**: Track and analyze health metrics from various sources\n    * **Protocol System**: Follow structured frameworks for health optimization\n    * **AI-Powered Insights**: Get personalized health insights using Gemini AI\n    * **Vector Embeddings**: Utilize semantic search for finding patterns in health data\n    * **Privacy-First Design**: Secure storage of health data with encryption\n    \n    ## Authentication\n    \n    This API uses JWT-based authentication. To access protected endpoints:\n    \n    1. Obtain an access token using the `/api/v1/auth/login` endpoint\n    2. Include the token in the Authorization header: `Authorization: Bearer {token}`\n    3. Use the refresh token to obtain a new access token when it expires\n    \n    ## Rate Limiting\n    \n    API requests are rate-limited to prevent abuse. The current limit is 100 requests per hour per IP address.\n    \n    ## Data Privacy\n    \n    All sensitive health data is encrypted at rest using PostgreSQL's pgcrypto extension.\n    ",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health-metrics/": {
+      "post": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Create Metric",
+        "description": "Create a new health metric.\n\nThis endpoint allows users to create a new health metric with validation and data transformation.\nThe metric will be validated against the schema for the specified metric type, and if it's from\na known source (e.g., Oura, Fitbit), the data will be transformed into a standardized format.\n\nThe endpoint also generates a vector embedding for the health metric, enabling semantic search\ncapabilities.\n\n- **metric_type**: Type of health metric (sleep, activity, heart_rate, etc.)\n- **value**: JSON object containing the metric data (structure depends on metric_type)\n- **source**: Source of the data (manual, oura, fitbit, etc.)\n- **date**: Date of the health metric (defaults to today if not provided)\n\nOnly authenticated users can create health metrics, and they can only create metrics for themselves.",
+        "operationId": "create_metric_api_v1_health_metrics__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthMetricCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Health metric created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetric"
+                },
+                "example": {
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "date": "2025-03-10",
+                  "metric_type": "sleep",
+                  "value": {
+                    "duration_hours": 7.5,
+                    "deep_sleep_hours": 1.2,
+                    "rem_sleep_hours": 1.8,
+                    "sleep_score": 85
+                  },
+                  "source": "oura"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": {
+                    "errors": [
+                      "Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/health-metrics/{id}": {
+      "get": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Read Metric",
+        "description": "Get a health metric by ID.\n\nRetrieves a specific health metric by its unique identifier. The metric's value is automatically\ndecrypted before being returned to the client.\n\nOnly authenticated users can access health metrics, and they can only access their own metrics.",
+        "operationId": "read_metric_api_v1_health_metrics__id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health metric retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetric"
+                },
+                "example": {
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "date": "2025-03-10",
+                  "metric_type": "sleep",
+                  "value": {
+                    "duration_hours": 7.5,
+                    "deep_sleep_hours": 1.2,
+                    "rem_sleep_hours": 1.8,
+                    "sleep_score": 85
+                  },
+                  "source": "oura"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Update Metric",
+        "description": "Update a health metric.\n\nUpdates an existing health metric with new values. The updated metric will be validated against\nthe schema for the specified metric type, and if it's from a known source, the data will be\ntransformed into a standardized format.\n\nIf the value is updated, a new vector embedding will be generated for the health metric.\n\nOnly authenticated users can update health metrics, and they can only update their own metrics.",
+        "operationId": "update_metric_api_v1_health_metrics__id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthMetricUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Health metric updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthMetric"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Delete Metric",
+        "description": "Delete a health metric.\n\nPermanently removes a health metric from the database.\n\nOnly authenticated users can delete health metrics, and they can only delete their own metrics.",
+        "operationId": "delete_metric_api_v1_health_metrics__id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health metric deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "title": "Response Delete Metric Api V1 Health Metrics  Id  Delete"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health-metrics/user/{user_id}": {
+      "get": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Read User Metrics",
+        "description": "Get health metrics for a user.\n\nRetrieves a list of health metrics for a specific user, with optional filtering by metric type\nand date range. The results can be paginated using the skip and limit parameters.\n\nAll metric values are automatically decrypted before being returned to the client.\n\nOnly authenticated users can access health metrics, and they can only access their own metrics.",
+        "operationId": "read_user_metrics_api_v1_health_metrics_user__user_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of records to skip for pagination",
+              "default": 0,
+              "title": "Skip"
+            },
+            "description": "Number of records to skip for pagination"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Maximum number of records to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Maximum number of records to return"
+          },
+          {
+            "name": "metric_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by metric type (e.g., sleep, activity)",
+              "title": "Metric Type"
+            },
+            "description": "Filter by metric type (e.g., sleep, activity)"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by start date (inclusive)",
+              "title": "Start Date"
+            },
+            "description": "Filter by start date (inclusive)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by end date (inclusive)",
+              "title": "End Date"
+            },
+            "description": "Filter by end date (inclusive)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health metrics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HealthMetric"
+                  },
+                  "title": "Response Read User Metrics Api V1 Health Metrics User  User Id  Get"
+                },
+                "example": [
+                  {
+                    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "date": "2025-03-10",
+                    "metric_type": "sleep",
+                    "value": {
+                      "duration_hours": 7.5,
+                      "deep_sleep_hours": 1.2,
+                      "rem_sleep_hours": 1.8,
+                      "sleep_score": 85
+                    },
+                    "source": "oura"
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health-metrics/search/similarity": {
+      "post": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Search Similar Metrics",
+        "description": "Search for health metrics similar to the query using vector similarity.\n\nThis endpoint uses semantic search to find health metrics that are conceptually similar to the\nprovided query. The query is converted to a vector embedding and compared to the embeddings of\nstored health metrics using cosine similarity.\n\n- **query**: Text query to search for (e.g., \"deep sleep\", \"high activity\")\n- **metric_type**: Optional filter by metric type\n- **limit**: Maximum number of results to return\n- **min_similarity**: Minimum similarity threshold (0-1)\n\nOnly authenticated users can search health metrics, and they can only search their own metrics.",
+        "operationId": "search_similar_metrics_api_v1_health_metrics_search_similarity_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthMetricSimilaritySearch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Similar health metrics found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HealthMetric"
+                  },
+                  "title": "Response Search Similar Metrics Api V1 Health Metrics Search Similarity Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/v1/health-metrics/stats/{user_id}/{metric_type}": {
+      "get": {
+        "tags": [
+          "Health Metrics"
+        ],
+        "summary": "Get Metrics Stats",
+        "description": "Get statistics for a specific health metric type over a time period.\n\nThis endpoint calculates various statistics for a specific health metric type, such as average,\nminimum, and maximum values. The statistics are calculated based on the metrics within the\nspecified date range.\n\nThe response structure varies based on the metric type:\n- **sleep**: Sleep duration and sleep score statistics\n- **activity**: Steps, active calories, and active minutes statistics\n- **heart_rate**: Average BPM and resting BPM statistics\n- **weight**: Weight value statistics\n- **blood_pressure**: Systolic and diastolic pressure statistics\n- **mood**: Mood rating statistics\n\nOnly authenticated users can access health metrics statistics, and they can only access their own statistics.",
+        "operationId": "get_metrics_stats_api_v1_health_metrics_stats__user_id___metric_type__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "metric_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric Type"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by start date (inclusive)",
+              "title": "Start Date"
+            },
+            "description": "Filter by start date (inclusive)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by end date (inclusive)",
+              "title": "End Date"
+            },
+            "description": "Filter by end date (inclusive)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Health metrics statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Metrics Stats Api V1 Health Metrics Stats  User Id   Metric Type  Get"
+                },
+                "example": {
+                  "count": 30,
+                  "date_range": {
+                    "start": "2025-02-10",
+                    "end": "2025-03-10"
+                  },
+                  "metric_type": "sleep",
+                  "sleep_duration": {
+                    "average": 7.2,
+                    "min": 6,
+                    "max": 8.5
+                  },
+                  "sleep_score": {
+                    "average": 82,
+                    "min": 65,
+                    "max": 95
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Health metric not found"
+          },
+          "422": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/v1/ai/insights/{user_id}": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Get Health Insight",
+        "description": "Generate a health insight using Gemini AI with RAG.",
+        "operationId": "get_health_insight_api_v1_ai_insights__user_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthInsightRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Health Insight Api V1 Ai Insights  User Id  Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/protocols/{user_id}": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Get Protocol Recommendation",
+        "description": "Generate a protocol recommendation using Gemini AI.",
+        "operationId": "get_protocol_recommendation_api_v1_ai_protocols__user_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolRecommendationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Protocol Recommendation Api V1 Ai Protocols  User Id  Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/trends/{user_id}": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Get Trend Analysis",
+        "description": "Analyze health trends for a specific metric using Gemini AI.",
+        "operationId": "get_trend_analysis_api_v1_ai_trends__user_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrendAnalysisRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Trend Analysis Api V1 Ai Trends  User Id  Post"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Create User Endpoint",
+        "description": "Create new user.\n\nThis endpoint is public to allow user registration.",
+        "operationId": "create_user_endpoint_api_v1_users__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Read User",
+        "description": "Get user by ID.",
+        "operationId": "read_user_api_v1_users__user_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update User Endpoint",
+        "description": "Update a user.",
+        "operationId": "update_user_endpoint_api_v1_users__user_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete User Endpoint",
+        "description": "Delete a user.",
+        "operationId": "delete_user_endpoint_api_v1_users__user_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "title": "Response Delete User Endpoint Api V1 Users  User Id  Delete"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login For Access Token",
+        "description": "OAuth2 compatible token login, get an access token for future requests.",
+        "operationId": "login_for_access_token_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_for_access_token_api_v1_auth_login_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Refresh Access Token",
+        "description": "Refresh access token.",
+        "operationId": "refresh_access_token_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshToken"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-reset": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Request Password Reset Endpoint",
+        "description": "Request a password reset.",
+        "operationId": "request_password_reset_endpoint_api_v1_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordReset"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Request Password Reset Endpoint Api V1 Auth Password Reset Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-reset/confirm": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Reset Password Endpoint",
+        "description": "Reset password with token.",
+        "operationId": "reset_password_endpoint_api_v1_auth_password_reset_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Reset Password Endpoint Api V1 Auth Password Reset Confirm Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password-change": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Change Password Endpoint",
+        "description": "Change current user's password.",
+        "operationId": "change_password_endpoint_api_v1_auth_password_change_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Change Password Endpoint Api V1 Auth Password Change Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Read Users Me",
+        "description": "Get current user.",
+        "operationId": "read_users_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/protocols/": {
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Read Protocols",
+        "description": "Retrieve protocols.",
+        "operationId": "read_protocols_api_v1_protocols__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "target_metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Metric"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Protocol"
+                  },
+                  "title": "Response Read Protocols Api V1 Protocols  Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Create Protocol Endpoint",
+        "description": "Create new protocol.",
+        "operationId": "create_protocol_endpoint_api_v1_protocols__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Protocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/{protocol_id}": {
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Read Protocol",
+        "description": "Get protocol by ID.",
+        "operationId": "read_protocol_api_v1_protocols__protocol_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Protocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Update Protocol Endpoint",
+        "description": "Update a protocol.",
+        "operationId": "update_protocol_endpoint_api_v1_protocols__protocol_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Protocol Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Protocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Delete Protocol Endpoint",
+        "description": "Delete a protocol.",
+        "operationId": "delete_protocol_endpoint_api_v1_protocols__protocol_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Delete Protocol Endpoint Api V1 Protocols  Protocol Id  Delete"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/templates/list": {
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Read Protocol Templates",
+        "description": "Retrieve available protocol templates.",
+        "operationId": "read_protocol_templates_api_v1_protocols_templates_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolTemplate"
+                  },
+                  "type": "array",
+                  "title": "Response Read Protocol Templates Api V1 Protocols Templates List Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/protocols/templates/create": {
+      "post": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Create From Template",
+        "description": "Create a protocol from a template.",
+        "operationId": "create_from_template_api_v1_protocols_templates_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolTemplateCustomization"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Protocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/protocols/templates/{template_id}/details": {
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Get Template Details",
+        "description": "Get detailed information about a protocol template.",
+        "operationId": "get_template_details_api_v1_protocols_templates__template_id__details_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Template Details Api V1 Protocols Templates  Template Id  Details Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/{protocol_id}/effectiveness-metrics": {
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Get Effectiveness Metrics",
+        "description": "Get effectiveness metrics for a protocol.",
+        "operationId": "get_effectiveness_metrics_api_v1_protocols__protocol_id__effectiveness_metrics_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Effectiveness Metrics Api V1 Protocols  Protocol Id  Effectiveness Metrics Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Read User Protocols",
+        "description": "Retrieve user protocols.",
+        "operationId": "read_user_protocols_api_v1_user_protocols__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserProtocolWithProtocol"
+                  },
+                  "title": "Response Read User Protocols Api V1 User Protocols  Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/active": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Read Active User Protocols",
+        "description": "Retrieve active user protocols.",
+        "operationId": "read_active_user_protocols_api_v1_user_protocols_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserProtocolWithProtocol"
+                  },
+                  "type": "array",
+                  "title": "Response Read Active User Protocols Api V1 User Protocols Active Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-protocols/enroll": {
+      "post": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Enroll In Protocol",
+        "description": "Enroll user in a protocol.",
+        "operationId": "enroll_in_protocol_api_v1_user_protocols_enroll_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProtocolCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProtocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Read User Protocol",
+        "description": "Get user protocol by ID.",
+        "operationId": "read_user_protocol_api_v1_user_protocols__user_protocol_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProtocolWithProtocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Update User Protocol Endpoint",
+        "description": "Update a user protocol.",
+        "operationId": "update_user_protocol_endpoint_api_v1_user_protocols__user_protocol_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProtocolUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProtocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Delete User Protocol Endpoint",
+        "description": "Delete a user protocol.",
+        "operationId": "delete_user_protocol_endpoint_api_v1_user_protocols__user_protocol_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Delete User Protocol Endpoint Api V1 User Protocols  User Protocol Id  Delete"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}/status": {
+      "put": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Update Status",
+        "description": "Update the status of a user protocol.",
+        "operationId": "update_status_api_v1_user_protocols__user_protocol_id__status_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProtocolStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProtocol"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}/progress": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Get Progress",
+        "description": "Get progress information for a user protocol.",
+        "operationId": "get_progress_api_v1_user_protocols__user_protocol_id__progress_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProtocolProgress"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}/effectiveness": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Get Effectiveness",
+        "description": "Get effectiveness metrics for a user protocol.\n\nThis endpoint provides rule-based effectiveness metrics for the protocol,\ncomparing baseline metrics before the protocol started with recent metrics.",
+        "operationId": "get_effectiveness_api_v1_user_protocols__user_protocol_id__effectiveness_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          },
+          {
+            "name": "evaluation_period_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "default": 7,
+              "title": "Evaluation Period Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Effectiveness Api V1 User Protocols  User Protocol Id  Effectiveness Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}/recommendations": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Get Recommendations",
+        "description": "Get rule-based recommendations for protocol adjustments.\n\nThis endpoint provides recommendations for adjusting the protocol based on\neffectiveness metrics, using a rule-based approach.",
+        "operationId": "get_recommendations_api_v1_user_protocols__user_protocol_id__recommendations_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Recommendations Api V1 User Protocols  User Protocol Id  Recommendations Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}/ai-analysis": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Get Ai Analysis",
+        "description": "Get AI-powered analysis of protocol effectiveness.\n\nThis endpoint provides an in-depth analysis of protocol effectiveness using\nGemini AI, offering research-backed insights and pattern recognition.",
+        "operationId": "get_ai_analysis_api_v1_user_protocols__user_protocol_id__ai_analysis_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Ai Analysis Api V1 User Protocols  User Protocol Id  Ai Analysis Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user-protocols/{user_protocol_id}/ai-adjustments": {
+      "get": {
+        "tags": [
+          "User Protocols"
+        ],
+        "summary": "Get Ai Adjustments",
+        "description": "Get AI-powered protocol adjustment recommendations.\n\nThis endpoint provides personalized, research-backed recommendations for\nadjusting the protocol using Gemini AI, offering more nuanced and\ncontext-aware suggestions than the rule-based approach.",
+        "operationId": "get_ai_adjustments_api_v1_user_protocols__user_protocol_id__ai_adjustments_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_protocol_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Protocol Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Get Ai Adjustments Api V1 User Protocols  User Protocol Id  Ai Adjustments Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint that redirects to API documentation.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint for monitoring.\n\nReturns:\n    A simple JSON response indicating the API is healthy.\n    \nExample:\n    ```json\n    {\n        \"status\": \"healthy\"\n    }\n    ```",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_login_for_access_token_api_v1_auth_login_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^password$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_for_access_token_api_v1_auth_login_post"
+      },
+      "ChangePassword": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePassword",
+        "description": "Change password schema."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthInsightRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "metric_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Types"
+          },
+          "update_memory": {
+            "type": "boolean",
+            "title": "Update Memory",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "HealthInsightRequest"
+      },
+      "HealthMetric": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "value": {
+            "type": "object",
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "embedding": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "metric_type",
+          "value",
+          "source",
+          "id",
+          "user_id"
+        ],
+        "title": "HealthMetric"
+      },
+      "HealthMetricCreate": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "value": {
+            "type": "object",
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "metric_type",
+          "value",
+          "source",
+          "user_id"
+        ],
+        "title": "HealthMetricCreate"
+      },
+      "HealthMetricSimilaritySearch": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "metric_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Type"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "default": 10
+          },
+          "min_similarity": {
+            "type": "number",
+            "title": "Min Similarity",
+            "default": 0.7
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "HealthMetricSimilaritySearch"
+      },
+      "HealthMetricUpdate": {
+        "properties": {
+          "date": {
+            "type": "null",
+            "title": "Date"
+          },
+          "metric_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Type"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "title": "HealthMetricUpdate"
+      },
+      "PasswordReset": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "PasswordReset",
+        "description": "Password reset request schema."
+      },
+      "PasswordResetConfirm": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "new_password": {
+            "type": "string",
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "PasswordResetConfirm",
+        "description": "Password reset confirmation schema."
+      },
+      "Protocol": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "target_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Metrics"
+          },
+          "duration_type": {
+            "type": "string",
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "target_metrics",
+          "duration_type",
+          "id"
+        ],
+        "title": "Protocol",
+        "description": "Protocol schema for response."
+      },
+      "ProtocolCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "target_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Metrics"
+          },
+          "duration_type": {
+            "type": "string",
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "target_metrics",
+          "duration_type"
+        ],
+        "title": "ProtocolCreate",
+        "description": "Protocol creation schema."
+      },
+      "ProtocolRecommendationRequest": {
+        "properties": {
+          "health_goal": {
+            "type": "string",
+            "title": "Health Goal"
+          },
+          "current_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Current Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "health_goal",
+          "current_metrics"
+        ],
+        "title": "ProtocolRecommendationRequest"
+      },
+      "ProtocolTemplate": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "target_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Metrics"
+          },
+          "duration_type": {
+            "type": "string",
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id",
+          "name",
+          "description",
+          "target_metrics",
+          "duration_type"
+        ],
+        "title": "ProtocolTemplate",
+        "description": "Protocol template schema."
+      },
+      "ProtocolTemplateCustomization": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "target_metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Metrics"
+          },
+          "duration_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id"
+        ],
+        "title": "ProtocolTemplateCustomization",
+        "description": "Protocol template customization schema."
+      },
+      "ProtocolUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "target_metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Metrics"
+          },
+          "duration_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          }
+        },
+        "type": "object",
+        "title": "ProtocolUpdate",
+        "description": "Protocol update schema."
+      },
+      "RefreshToken": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshToken",
+        "description": "Refresh token schema for request."
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token",
+          "token_type"
+        ],
+        "title": "Token",
+        "description": "Token schema for response."
+      },
+      "TrendAnalysisRequest": {
+        "properties": {
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "time_period": {
+            "type": "string",
+            "title": "Time Period",
+            "default": "last_month"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_type"
+        ],
+        "title": "TrendAnalysisRequest"
+      },
+      "User": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "id"
+        ],
+        "title": "User"
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "UserCreate"
+      },
+      "UserProtocol": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "protocol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protocol Id"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "protocol_id",
+          "start_date",
+          "status",
+          "id"
+        ],
+        "title": "UserProtocol",
+        "description": "User protocol schema for response."
+      },
+      "UserProtocolCreate": {
+        "properties": {
+          "protocol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protocol Id"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_id"
+        ],
+        "title": "UserProtocolCreate",
+        "description": "User protocol creation schema."
+      },
+      "UserProtocolProgress": {
+        "properties": {
+          "user_protocol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Protocol Id"
+          },
+          "protocol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protocol Id"
+          },
+          "protocol_name": {
+            "type": "string",
+            "title": "Protocol Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "days_elapsed": {
+            "type": "integer",
+            "title": "Days Elapsed"
+          },
+          "days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Remaining"
+          },
+          "completion_percentage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Percentage"
+          },
+          "duration_type": {
+            "type": "string",
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "target_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_protocol_id",
+          "protocol_id",
+          "protocol_name",
+          "status",
+          "start_date",
+          "days_elapsed",
+          "duration_type",
+          "target_metrics"
+        ],
+        "title": "UserProtocolProgress",
+        "description": "User protocol progress schema."
+      },
+      "UserProtocolStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "UserProtocolStatusUpdate",
+        "description": "User protocol status update schema."
+      },
+      "UserProtocolUpdate": {
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "title": "UserProtocolUpdate",
+        "description": "User protocol update schema."
+      },
+      "UserProtocolWithProtocol": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "protocol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protocol Id"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/Protocol"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "protocol_id",
+          "start_date",
+          "status",
+          "id",
+          "protocol"
+        ],
+        "title": "UserProtocolWithProtocol",
+        "description": "User protocol with protocol details."
+      },
+      "UserUpdate": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferences"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {
+
+            },
+            "tokenUrl": "/api/v1/auth/login"
+          }
+        }
+      }
+    }
+  }
+}

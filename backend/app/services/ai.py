@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 # Configure the Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 # System prompt template
 SYSTEM_PROMPT = """
@@ -19,17 +19,12 @@ Your core principles:
 1. Present objective, research-backed insights without being prescriptive
 2. Respect user autonomy - provide information, not commands
 3. Focus on patterns and correlations in health data
-4. Maintain a supportive, non-judgmental tone
-5. Prioritize privacy and data security
+4. Be concise and direct - provide brief, focused responses
+5. Prioritize actionable insights over general information
 
-When analyzing health data:
-- Look for patterns and correlations between metrics
-- Identify potential areas for optimization
-- Reference relevant scientific research
-- Present insights as observations, not directives
-- Acknowledge limitations in the data
-
-Remember: You are not providing medical advice. You are helping users understand their own health data patterns.
+IMPORTANT: Keep your responses brief and to the point. Focus on the most relevant insights based on the available data.
+Avoid lengthy explanations, background information, or general health advice unless specifically requested.
+Limit your response to 3-5 sentences whenever possible.
 """
 
 
@@ -37,17 +32,17 @@ async def generate_health_insight(
     db: Session, user_id: UUID, query: str, metric_types: Optional[List[str]] = None, update_memory: bool = True
 ) -> Dict[str, Any]:
     """
-    Generate a health insight using Gemini AI with RAG.
+    Generate health insights using Gemini AI.
 
     Args:
         db: Database session
         user_id: User ID
-        query: User query
-        metric_types: Optional list of metric types to include in context
-        update_memory: Whether to update AI memory with the response
+        query: User's query about their health
+        metric_types: Optional list of metric types to filter by
+        update_memory: Whether to update the AI memory with this interaction
 
     Returns:
-        Dictionary containing the response and metadata
+        Dictionary containing the health insight
     """
     # Retrieve relevant context using RAG
     context = retrieve_context_for_user(db=db, user_id=user_id, query=query, metric_types=metric_types)
@@ -59,55 +54,57 @@ async def generate_health_insight(
     ai_memory = get_ai_memory(db, user_id)
     memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
 
-    # Create the full prompt
-    user_prompt = f"""
+    # Check if we have any health data
+    if not context or all(not metrics for metrics in context.values()):
+        # No health data available
+        insight_prompt = f"""
+{SYSTEM_PROMPT}
+
+The user has requested health insights, but there is no health data available.
+
+{memory_context}
+
+Provide a brief, 2-3 sentence response acknowledging the lack of data and suggesting what types of health data would be most valuable to track. Be direct and concise.
+"""
+    else:
+        # Create the insight prompt with available health data
+        insight_prompt = f"""
 {SYSTEM_PROMPT}
 
 {context_text}
 
-User Query: {query}
-
 {memory_context}
 
-Please provide an objective, research-backed insight based on the available health data.
-Focus on patterns, correlations, and potential optimizations without being prescriptive.
+Based on the health data provided, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends. Focus only on objective observations from the data without making assumptions.
+
+If specific metrics stand out (either positively or negatively), briefly mention them. If there are clear correlations between different metrics, note them concisely.
 """
 
     # Generate response from Gemini
     model = genai.GenerativeModel(model_name)
     response = await model.generate_content_async(
-        user_prompt,
+        insight_prompt,
         generation_config={
             "temperature": 0.2,
             "top_p": 0.95,
             "top_k": 40,
-            "max_output_tokens": 1024,
+            "max_output_tokens": 300,  # Reduced to encourage brevity
         },
     )
 
     # Extract the response text
-    response_text = response.text
+    insight = response.text
 
-    # Update AI memory if requested
-    if update_memory:
-        # Create a summary of the interaction for memory
-        memory_summary = f"""
-User asked: {query}
-Key health metrics analyzed: {', '.join(context['health_metrics'].keys()) if context['health_metrics'] else 'None'}
-Key insight provided: {response_text[:200]}...
+    # Update AI memory with this interaction
+    memory_summary = f"""
+User requested: Health insights for {', '.join(metric_types) if metric_types else 'all metrics'}
+Key insight provided: {insight[:200]}...
 """
-        # Update or create AI memory
+    if update_memory:
         create_or_update_ai_memory(db, user_id, memory_summary)
 
-    # Return the response and metadata
-    return {
-        "response": response_text,
-        "metadata": {
-            "model": model_name,
-            "metrics_analyzed": list(context["health_metrics"].keys()) if context["health_metrics"] else [],
-            "memory_updated": update_memory,
-        },
-    }
+    # Return the insight
+    return {"insight": insight, "metadata": {"model": model_name, "metric_types": metric_types, "has_memory": ai_memory is not None}}
 
 
 async def generate_protocol_recommendation(db: Session, user_id: UUID, health_goal: str, current_metrics: List[str]) -> Dict[str, Any]:
@@ -126,8 +123,20 @@ async def generate_protocol_recommendation(db: Session, user_id: UUID, health_go
     # Retrieve relevant context using RAG
     context = retrieve_context_for_user(db=db, user_id=user_id, query=health_goal, metric_types=current_metrics)
 
+    # Check if we have any health metrics data for the requested types
+    has_health_data = False
+    available_metrics = []
+    for metric_type in current_metrics:
+        if context["health_metrics"].get(metric_type, []):
+            has_health_data = True
+            available_metrics.append(metric_type)
+
     # Format context for prompt
     context_text = format_context_for_prompt(context)
+
+    # Get existing AI memory if available
+    ai_memory = get_ai_memory(db, user_id)
+    memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
 
     # Create the protocol recommendation prompt
     protocol_prompt = f"""
@@ -135,18 +144,13 @@ async def generate_protocol_recommendation(db: Session, user_id: UUID, health_go
 
 {context_text}
 
+{memory_context}
+
 User's Health Goal: {health_goal}
 Available Metrics: {', '.join(current_metrics)}
+Metrics with Data: {', '.join(available_metrics) if available_metrics else "None"}
 
-Please recommend a health protocol that would help the user achieve their goal.
-The protocol should include:
-1. A clear objective aligned with the user's goal
-2. Key metrics to track
-3. A suggested duration
-4. Expected outcomes
-5. How progress will be measured
-
-Remember to be objective and research-backed without being prescriptive.
+{"Provide a concise protocol recommendation to help the user achieve their goal. Limit your response to 5-7 sentences that outline: (1) A clear objective, (2) Key metrics to track, (3) A suggested timeframe, and (4) How to measure progress. Be direct and specific." if has_health_data else "The user doesn't have relevant health data yet. In 2-3 sentences, suggest a basic protocol and what data they should start collecting to achieve their goal."}
 """
 
     # Generate response from Gemini
@@ -157,17 +161,33 @@ Remember to be objective and research-backed without being prescriptive.
             "temperature": 0.3,
             "top_p": 0.95,
             "top_k": 40,
-            "max_output_tokens": 1500,
+            "max_output_tokens": 400,  # Reduced from 1500 to encourage brevity
         },
     )
 
     # Extract the response text
     protocol_recommendation = response.text
 
+    # Update AI memory with this interaction
+    memory_summary = f"""
+User requested: Protocol recommendation for health goal: {health_goal}
+Metrics requested: {', '.join(current_metrics)}
+Data available: {"Yes, for " + ', '.join(available_metrics) if available_metrics else "No"}
+Key recommendation provided: {protocol_recommendation[:200]}...
+"""
+    create_or_update_ai_memory(db, user_id, memory_summary)
+
     # Return the protocol recommendation
     return {
         "protocol_recommendation": protocol_recommendation,
-        "metadata": {"model": model_name, "health_goal": health_goal, "metrics_considered": current_metrics},
+        "has_data": has_health_data,
+        "metadata": {
+            "model": model_name,
+            "health_goal": health_goal,
+            "metrics_requested": current_metrics,
+            "metrics_available": available_metrics,
+            "has_memory": ai_memory is not None,
+        },
     }
 
 
@@ -189,8 +209,15 @@ async def analyze_health_trends(db: Session, user_id: UUID, metric_type: str, ti
         db=db, user_id=user_id, query=f"Analyze my {metric_type} trends for the {time_period}", metric_types=[metric_type]
     )
 
+    # Check if we have any health metrics data for the requested type
+    has_health_data = bool(context["health_metrics"].get(metric_type, []))
+
     # Format context for prompt
     context_text = format_context_for_prompt(context)
+
+    # Get existing AI memory if available
+    ai_memory = get_ai_memory(db, user_id)
+    memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
 
     # Create the trend analysis prompt
     trend_prompt = f"""
@@ -198,15 +225,9 @@ async def analyze_health_trends(db: Session, user_id: UUID, metric_type: str, ti
 
 {context_text}
 
-Please analyze the trends in the user's {metric_type} data over the {time_period}.
-Focus on:
-1. Overall patterns and changes
-2. Potential correlations with other factors
-3. Areas for potential optimization
-4. Comparison to research-backed optimal ranges
-5. Objective insights without prescriptive advice
+{memory_context}
 
-Provide a comprehensive analysis based on the available data.
+{"Provide a brief analysis of the trends in the user's " + metric_type + " data over the " + time_period + ". Limit your response to 3-5 sentences that highlight the most significant patterns or changes. Focus only on what's directly observable in the data." if has_health_data else "The user doesn't have any " + metric_type + " data for the " + time_period + ". In 1-2 sentences, acknowledge this and suggest what types of " + metric_type + " data would be helpful to collect."}
 """
 
     # Generate response from Gemini
@@ -217,12 +238,260 @@ Provide a comprehensive analysis based on the available data.
             "temperature": 0.1,
             "top_p": 0.95,
             "top_k": 40,
-            "max_output_tokens": 1200,
+            "max_output_tokens": 300,  # Reduced from 1200 to encourage brevity
         },
     )
 
     # Extract the response text
     trend_analysis = response.text
 
+    # Update AI memory with this interaction
+    memory_summary = f"""
+User requested: Analysis of {metric_type} trends for {time_period}
+Data available: {"Yes" if has_health_data else "No"}
+Key analysis provided: {trend_analysis[:200]}...
+"""
+    create_or_update_ai_memory(db, user_id, memory_summary)
+
     # Return the trend analysis
-    return {"trend_analysis": trend_analysis, "metadata": {"model": model_name, "metric_type": metric_type, "time_period": time_period}}
+    return {
+        "trend_analysis": trend_analysis,
+        "has_data": has_health_data,
+        "metadata": {"model": model_name, "metric_type": metric_type, "time_period": time_period, "has_memory": ai_memory is not None},
+    }
+
+
+async def analyze_protocol_effectiveness(
+    db: Session, user_id: UUID, protocol_id: UUID, user_protocol_id: UUID, effectiveness_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Analyze the effectiveness of a protocol using Gemini AI.
+
+    Args:
+        db: Database session
+        user_id: User ID
+        protocol_id: Protocol ID
+        user_protocol_id: User Protocol ID
+        effectiveness_data: Protocol effectiveness data
+
+    Returns:
+        Dictionary containing the analysis
+    """
+    # Get protocol details
+    protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
+    if not protocol:
+        raise HTTPException(status_code=404, detail="Protocol not found")
+
+    # Get user protocol details
+    user_protocol = db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
+    if not user_protocol:
+        raise HTTPException(status_code=404, detail="User protocol not found")
+
+    # Retrieve relevant context using RAG
+    context = retrieve_context_for_user(
+        db=db, user_id=user_id, query=f"Analyze the effectiveness of my {protocol.name} protocol", metric_types=protocol.target_metrics
+    )
+
+    # Format context for prompt
+    context_text = format_context_for_prompt(context)
+
+    # Get existing AI memory if available
+    ai_memory = get_ai_memory(db, user_id)
+    memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
+
+    # Format effectiveness data
+    effectiveness_text = "Protocol Effectiveness Data:\n"
+    for metric_type, data in effectiveness_data.items():
+        if metric_type != "overall":
+            effectiveness_text += f"- {metric_type.title()}:\n"
+            for key, value in data.items():
+                if isinstance(value, (int, float)):
+                    effectiveness_text += f"  - {key}: {value:.2f}\n"
+                else:
+                    effectiveness_text += f"  - {key}: {value}\n"
+
+    # Add overall effectiveness
+    if "overall" in effectiveness_data:
+        effectiveness_text += "- Overall:\n"
+        for key, value in effectiveness_data["overall"].items():
+            if isinstance(value, (int, float)):
+                effectiveness_text += f"  - {key}: {value:.2f}\n"
+            else:
+                effectiveness_text += f"  - {key}: {value}\n"
+
+    # Create the analysis prompt
+    analysis_prompt = f"""
+{SYSTEM_PROMPT}
+
+{context_text}
+
+{memory_context}
+
+Protocol: {protocol.name}
+Description: {protocol.description}
+Target Metrics: {', '.join(protocol.target_metrics)}
+Duration Type: {protocol.duration_type}
+Duration Days: {protocol.duration_days if protocol.duration_days else 'Ongoing'}
+Start Date: {user_protocol.start_date}
+Status: {user_protocol.status}
+
+{effectiveness_text}
+
+Provide a concise analysis of this protocol's effectiveness. Limit your response to 3-5 sentences that highlight the most significant results and areas for improvement. Focus only on what's directly observable in the data.
+"""
+
+    # Generate response from Gemini
+    model = genai.GenerativeModel(model_name)
+    response = await model.generate_content_async(
+        analysis_prompt,
+        generation_config={
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": 300,  # Reduced to encourage brevity
+        },
+    )
+
+    # Extract the response text
+    analysis = response.text
+
+    # Update AI memory with this interaction
+    memory_summary = f"""
+User requested: Analysis of {protocol.name} protocol effectiveness
+Protocol status: {user_protocol.status}
+Key analysis provided: {analysis[:200]}...
+"""
+    create_or_update_ai_memory(db, user_id, memory_summary)
+
+    # Return the analysis
+    return {
+        "analysis": analysis,
+        "metadata": {
+            "model": model_name,
+            "protocol_name": protocol.name,
+            "protocol_id": str(protocol_id),
+            "user_protocol_id": str(user_protocol_id),
+            "has_memory": ai_memory is not None,
+        },
+    }
+
+
+async def generate_protocol_adjustments(
+    db: Session,
+    user_id: UUID,
+    protocol_id: UUID,
+    user_protocol_id: UUID,
+    effectiveness_data: Dict[str, Any],
+    recommendations_data: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Generate protocol adjustments using Gemini AI.
+
+    Args:
+        db: Database session
+        user_id: User ID
+        protocol_id: Protocol ID
+        user_protocol_id: User Protocol ID
+        effectiveness_data: Protocol effectiveness data
+        recommendations_data: Protocol recommendations data
+
+    Returns:
+        Dictionary containing the protocol adjustments
+    """
+    # Get protocol details
+    protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
+    if not protocol:
+        raise HTTPException(status_code=404, detail="Protocol not found")
+
+    # Get user protocol details
+    user_protocol = db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
+    if not user_protocol:
+        raise HTTPException(status_code=404, detail="User protocol not found")
+
+    # Retrieve relevant context using RAG
+    context = retrieve_context_for_user(
+        db=db, user_id=user_id, query=f"Suggest adjustments for my {protocol.name} protocol", metric_types=protocol.target_metrics
+    )
+
+    # Format context for prompt
+    context_text = format_context_for_prompt(context)
+
+    # Get existing AI memory if available
+    ai_memory = get_ai_memory(db, user_id)
+    memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
+
+    # Format effectiveness data
+    effectiveness_text = "Protocol Effectiveness Data:\n"
+    for metric_type, data in effectiveness_data.items():
+        if metric_type != "overall":
+            effectiveness_text += f"- {metric_type.title()}:\n"
+            for key, value in data.items():
+                if isinstance(value, (int, float)):
+                    effectiveness_text += f"  - {key}: {value:.2f}\n"
+                else:
+                    effectiveness_text += f"  - {key}: {value}\n"
+
+    # Format recommendations data
+    recommendations_text = "Current Recommendations:\n"
+    for metric_type, recommendations in recommendations_data.items():
+        recommendations_text += f"- {metric_type.title()}:\n"
+        for recommendation in recommendations:
+            recommendations_text += f"  - {recommendation}\n"
+
+    # Create the adjustments prompt
+    adjustments_prompt = f"""
+{SYSTEM_PROMPT}
+
+{context_text}
+
+{memory_context}
+
+Protocol: {protocol.name}
+Description: {protocol.description}
+Target Metrics: {', '.join(protocol.target_metrics)}
+Duration Type: {protocol.duration_type}
+Duration Days: {protocol.duration_days if protocol.duration_days else 'Ongoing'}
+Start Date: {user_protocol.start_date}
+Status: {user_protocol.status}
+
+{effectiveness_text}
+
+{recommendations_text}
+
+Provide 2-3 specific, actionable adjustments to improve this protocol based on the effectiveness data. Be direct and concise, focusing only on the most impactful changes. Each suggestion should be 1-2 sentences.
+"""
+
+    # Generate response from Gemini
+    model = genai.GenerativeModel(model_name)
+    response = await model.generate_content_async(
+        adjustments_prompt,
+        generation_config={
+            "temperature": 0.3,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": 300,  # Reduced to encourage brevity
+        },
+    )
+
+    # Extract the response text
+    adjustments = response.text
+
+    # Update AI memory with this interaction
+    memory_summary = f"""
+User requested: Adjustments for {protocol.name} protocol
+Protocol status: {user_protocol.status}
+Key adjustments provided: {adjustments[:200]}...
+"""
+    create_or_update_ai_memory(db, user_id, memory_summary)
+
+    # Return the adjustments
+    return {
+        "adjustments": adjustments,
+        "metadata": {
+            "model": model_name,
+            "protocol_name": protocol.name,
+            "protocol_id": str(protocol_id),
+            "user_protocol_id": str(user_protocol_id),
+            "has_memory": ai_memory is not None,
+        },
+    }

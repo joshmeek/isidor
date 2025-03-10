@@ -49,3 +49,68 @@ def cosine_similarity(embedding1: List[float], embedding2: List[float]) -> float
     norm2 = np.linalg.norm(vec2)
 
     return dot_product / (norm1 * norm2)
+
+
+def format_vector_for_postgres(embedding: List[float]) -> str:
+    """
+    Format a vector for PostgreSQL pgvector insertion.
+
+    Args:
+        embedding: List of float values representing the embedding
+
+    Returns:
+        String formatted for PostgreSQL vector type
+    """
+    # Return the embedding as a list of floats, not as a string
+    # This will be properly cast to a vector by SQLAlchemy
+    return embedding
+
+
+def normalize_vector(embedding: List[float]) -> List[float]:
+    """
+    Normalize a vector to unit length for improved similarity search.
+
+    Args:
+        embedding: List of float values representing the embedding
+
+    Returns:
+        Normalized embedding vector
+    """
+    vec = np.array(embedding)
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        normalized = vec / norm
+        return normalized.tolist()
+    return embedding
+
+
+def euclidean_distance(embedding1: List[float], embedding2: List[float]) -> float:
+    """
+    Calculate Euclidean distance between two embeddings.
+
+    Args:
+        embedding1: First embedding vector
+        embedding2: Second embedding vector
+
+    Returns:
+        Euclidean distance (lower means more similar)
+    """
+    vec1 = np.array(embedding1)
+    vec2 = np.array(embedding2)
+    return np.linalg.norm(vec1 - vec2)
+
+
+def dot_product(embedding1: List[float], embedding2: List[float]) -> float:
+    """
+    Calculate dot product between two embeddings.
+
+    Args:
+        embedding1: First embedding vector
+        embedding2: Second embedding vector
+
+    Returns:
+        Dot product (higher means more similar)
+    """
+    vec1 = np.array(embedding1)
+    vec2 = np.array(embedding2)
+    return np.dot(vec1, vec2)

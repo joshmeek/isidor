@@ -38,7 +38,7 @@ This is the FastAPI backend for Isidor, an AI-driven life protocol system design
    EMBEDDING_DIMENSION=384
    SIMILARITY_THRESHOLD=0.7
    GEMINI_API_KEY=your-gemini-api-key
-   GEMINI_MODEL=gemini-1.5-pro
+   GEMINI_MODEL=gemini-2.0-flash
    ```
 
 4. Run database migrations:

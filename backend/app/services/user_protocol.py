@@ -144,3 +144,68 @@ def get_user_protocol_progress(db: Session, user_protocol_id: UUID) -> Dict[str,
     }
 
     return progress
+
+
+def get_user_protocol_effectiveness(db: Session, user_protocol_id: UUID, evaluation_period_days: int = 7) -> Dict[str, Any]:
+    """
+    Get effectiveness information for a user protocol.
+
+    Args:
+        db: Database session
+        user_protocol_id: ID of the user protocol
+        evaluation_period_days: Number of days to use for evaluation
+
+    Returns:
+        Dictionary with effectiveness metrics
+    """
+    from app.services.protocol_effectiveness import calculate_protocol_effectiveness
+
+    return calculate_protocol_effectiveness(db=db, user_protocol_id=user_protocol_id, evaluation_period_days=evaluation_period_days)
+
+
+def get_user_protocol_recommendations(db: Session, user_protocol_id: UUID) -> Dict[str, Any]:
+    """
+    Get recommendations for protocol adjustments based on effectiveness.
+
+    Args:
+        db: Database session
+        user_protocol_id: ID of the user protocol
+
+    Returns:
+        Dictionary with recommendations
+    """
+    from app.services.protocol_effectiveness import generate_protocol_recommendations
+
+    return generate_protocol_recommendations(db=db, user_protocol_id=user_protocol_id)
+
+
+async def get_user_protocol_ai_analysis(db: Session, user_protocol_id: UUID) -> Dict[str, Any]:
+    """
+    Get AI analysis of protocol effectiveness.
+
+    Args:
+        db: Database session
+        user_protocol_id: ID of the user protocol
+
+    Returns:
+        Dictionary with AI analysis of protocol effectiveness
+    """
+    from app.services.protocol_effectiveness import analyze_protocol_effectiveness_with_ai
+
+    return await analyze_protocol_effectiveness_with_ai(db=db, user_protocol_id=user_protocol_id)
+
+
+async def get_user_protocol_ai_adjustments(db: Session, user_protocol_id: UUID) -> Dict[str, Any]:
+    """
+    Get AI-generated protocol adjustment recommendations.
+
+    Args:
+        db: Database session
+        user_protocol_id: ID of the user protocol
+
+    Returns:
+        Dictionary with AI-generated protocol adjustments
+    """
+    from app.services.protocol_effectiveness import generate_protocol_adjustments_with_ai
+
+    return await generate_protocol_adjustments_with_ai(db=db, user_protocol_id=user_protocol_id)
