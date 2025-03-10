@@ -155,6 +155,8 @@ def find_similar_health_metrics(
     metric_type: Optional[str] = None,
     limit: int = 10,
     min_similarity: float = 0.5,  # Reduced from 0.7 to 0.5 to ensure we get results
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
 ) -> List[HealthMetric]:
     """
     Find health metrics similar to the query embedding.
@@ -166,6 +168,8 @@ def find_similar_health_metrics(
         metric_type: Optional metric type filter
         limit: Maximum number of results
         min_similarity: Minimum similarity threshold
+        start_date: Optional start date filter
+        end_date: Optional end date filter
 
     Returns:
         List of similar health metrics
@@ -176,10 +180,17 @@ def find_similar_health_metrics(
     # Apply metric type filter if provided
     if metric_type:
         query = query.filter(HealthMetric.metric_type == metric_type)
+        
+    # Apply date range filters if provided
+    if start_date:
+        query = query.filter(HealthMetric.date >= start_date)
+        
+    if end_date:
+        query = query.filter(HealthMetric.date <= end_date)
 
     # Get total count of metrics of this type for this user (for debugging)
     total_count = query.count()
-    print(f"DEBUG: Found {total_count} total metrics for user {user_id} of type {metric_type or 'all'}")
+    print(f"DEBUG: Found {total_count} total metrics for user {user_id} of type {metric_type or 'all'} from {start_date} to {end_date}")
 
     # If no metrics found, return empty list
     if total_count == 0:

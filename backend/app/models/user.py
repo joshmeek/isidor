@@ -18,3 +18,4 @@ class User(Base):
     health_metrics = relationship("HealthMetric", back_populates="user", cascade="all, delete-orphan")
     protocols = relationship("UserProtocol", back_populates="user", cascade="all, delete-orphan")
     ai_memory = relationship("AIMemory", back_populates="user", cascade="all, delete-orphan", uselist=False)
+    ai_cached_responses = relationship("AICachedResponse", back_populates="user", cascade="all, delete-orphan")

@@ -16,6 +16,7 @@ class HealthInsightRequest(BaseModel):
     query: str
     metric_types: Optional[List[str]] = None
     update_memory: bool = True
+    time_frame: str = "last_day"  # Options: "last_day", "last_week", "last_month"
 
 
 class ProtocolRecommendationRequest(BaseModel):
@@ -50,7 +51,12 @@ async def get_health_insight(
 
     try:
         result = await generate_health_insight(
-            db=db, user_id=user_id, query=request.query, metric_types=request.metric_types, update_memory=request.update_memory
+            db=db, 
+            user_id=user_id, 
+            query=request.query, 
+            metric_types=request.metric_types, 
+            update_memory=request.update_memory,
+            time_frame=request.time_frame
         )
         return result
     except Exception as e:

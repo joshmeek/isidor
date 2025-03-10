@@ -4,6 +4,7 @@ from uuid import UUID
 
 import google.generativeai as genai
 from app.services.ai_memory import create_or_update_ai_memory, get_ai_memory
+from app.services.ai_cache import generate_query_hash, get_cached_response, create_cached_response
 from app.utils.rag import format_context_for_prompt, retrieve_context_for_user
 from sqlalchemy.orm import Session
 
@@ -29,7 +30,13 @@ Limit your response to 3-5 sentences whenever possible.
 
 
 async def generate_health_insight(
-    db: Session, user_id: UUID, query: str, metric_types: Optional[List[str]] = None, update_memory: bool = True
+    db: Session, 
+    user_id: UUID, 
+    query: str, 
+    metric_types: Optional[List[str]] = None, 
+    update_memory: bool = True,
+    time_frame: str = "last_day",
+    use_cache: bool = True
 ) -> Dict[str, Any]:
     """
     Generate health insights using Gemini AI.
@@ -40,12 +47,35 @@ async def generate_health_insight(
         query: User's query about their health
         metric_types: Optional list of metric types to filter by
         update_memory: Whether to update the AI memory with this interaction
+        time_frame: Time frame for the analysis (e.g., "last_day", "last_week")
+        use_cache: Whether to use cached responses
 
     Returns:
         Dictionary containing the health insight
     """
+    # Check cache first if enabled
+    if use_cache:
+        query_hash = generate_query_hash(query, metric_types, time_frame=time_frame)
+        cached_response = get_cached_response(
+            db=db,
+            user_id=user_id,
+            endpoint="health_insight",
+            time_frame=time_frame,
+            query_hash=query_hash
+        )
+        
+        if cached_response:
+            print(f"Using cached response for user {user_id}, time_frame {time_frame}")
+            return cached_response.response_data
+
     # Retrieve relevant context using RAG
-    context = retrieve_context_for_user(db=db, user_id=user_id, query=query, metric_types=metric_types)
+    context = retrieve_context_for_user(
+        db=db, 
+        user_id=user_id, 
+        query=query, 
+        metric_types=metric_types,
+        time_frame=time_frame
+    )
 
     # Format context for prompt
     context_text = format_context_for_prompt(context)
@@ -55,12 +85,15 @@ async def generate_health_insight(
     memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
 
     # Check if we have any health data
-    if not context or all(not metrics for metrics in context.values()):
+    has_health_data = bool(context.get("health_metrics"))
+    has_active_protocols = bool(context.get("active_protocols"))
+
+    if not has_health_data:
         # No health data available
         insight_prompt = f"""
 {SYSTEM_PROMPT}
 
-The user has requested health insights, but there is no health data available.
+The user has requested health insights for the {time_frame.replace('_', ' ')}, but there is no health data available.
 
 {memory_context}
 
@@ -68,14 +101,35 @@ Provide a brief, 2-3 sentence response acknowledging the lack of data and sugges
 """
     else:
         # Create the insight prompt with available health data
-        insight_prompt = f"""
+        if has_active_protocols:
+            # User has active protocols, focus insights on those
+            insight_prompt = f"""
 {SYSTEM_PROMPT}
 
 {context_text}
 
 {memory_context}
 
-Based on the health data provided, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends. Focus only on objective observations from the data without making assumptions.
+Based on the health data from the {time_frame.replace('_', ' ')} and active protocols provided, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends related to the user's active protocols.
+
+Focus on:
+1. How the user's health metrics relate to their protocol goals
+2. Any progress or challenges observed in the target metrics
+3. Specific metrics that stand out (either positively or negatively)
+4. Clear correlations between different metrics that are relevant to their protocols
+
+Be objective, direct, and focused on actionable insights related to their protocols.
+"""
+        else:
+            # No active protocols, provide general insights
+            insight_prompt = f"""
+{SYSTEM_PROMPT}
+
+{context_text}
+
+{memory_context}
+
+Based on the health data from the {time_frame.replace('_', ' ')}, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends. Focus only on objective observations from the data without making assumptions.
 
 If specific metrics stand out (either positively or negatively), briefly mention them. If there are clear correlations between different metrics, note them concisely.
 """
@@ -97,14 +151,43 @@ If specific metrics stand out (either positively or negatively), briefly mention
 
     # Update AI memory with this interaction
     memory_summary = f"""
-User requested: Health insights for {', '.join(metric_types) if metric_types else 'all metrics'}
+User requested: Health insights for {time_frame.replace('_', ' ')} for {', '.join(metric_types) if metric_types else 'all metrics'}
 Key insight provided: {insight[:200]}...
 """
     if update_memory:
         create_or_update_ai_memory(db, user_id, memory_summary)
 
+    # Prepare response data
+    response_data = {
+        "response": insight, 
+        "metadata": {
+            "model": model_name, 
+            "metric_types": metric_types, 
+            "has_memory": ai_memory is not None,
+            "has_active_protocols": has_active_protocols,
+            "protocol_count": len(context.get("active_protocols", [])),
+            "time_frame": time_frame,
+            "cached": False
+        },
+        "has_data": has_health_data
+    }
+    
+    # Cache the response if enabled
+    if use_cache:
+        query_hash = generate_query_hash(query, metric_types, time_frame=time_frame)
+        create_cached_response(
+            db=db,
+            user_id=user_id,
+            endpoint="health_insight",
+            time_frame=time_frame,
+            query_hash=query_hash,
+            response_data=response_data,
+            metric_types=metric_types,
+            ttl_hours=24  # Cache for 24 hours
+        )
+
     # Return the insight
-    return {"insight": insight, "metadata": {"model": model_name, "metric_types": metric_types, "has_memory": ai_memory is not None}}
+    return response_data
 
 
 async def generate_protocol_recommendation(db: Session, user_id: UUID, health_goal: str, current_metrics: List[str]) -> Dict[str, Any]:

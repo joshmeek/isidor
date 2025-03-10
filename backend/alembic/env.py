@@ -16,7 +16,7 @@ fileConfig(config.config_file_name)
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from app.db.session import Base
-from app.models import AIMemory, HealthMetric, Protocol, User, UserProtocol
+from app.models import AIMemory, AICachedResponse, HealthMetric, Protocol, User, UserProtocol
 
 target_metadata = Base.metadata
 

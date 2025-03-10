@@ -37,6 +37,10 @@ console.log('Using API URL:', API_URL);
 // Storage keys
 const ACCESS_TOKEN_KEY = 'isidor_access_token';
 const REFRESH_TOKEN_KEY = 'isidor_refresh_token';
+const USER_ID_KEY = 'user_id';
+
+// Export constants for use in other files
+export { USER_ID_KEY };
 
 // Types
 export interface LoginCredentials {
@@ -234,11 +238,20 @@ export async function refreshToken(): Promise<TokenResponse | null> {
 export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
   await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+  await AsyncStorage.removeItem(USER_ID_KEY);
 }
 
 export async function getCurrentUser(): Promise<User> {
   try {
-    return await authenticatedRequest<User>('/api/v1/auth/me', 'GET');
+    const user = await authenticatedRequest<User>('/api/v1/auth/me', 'GET');
+    
+    // Store user ID in AsyncStorage
+    if (user && user.id) {
+      await AsyncStorage.setItem(USER_ID_KEY, user.id);
+      console.log('Stored user ID in AsyncStorage:', user.id);
+    }
+    
+    return user;
   } catch (error) {
     console.error('Error getting current user:', error);
     throw error;
@@ -431,6 +444,60 @@ export async function getProtocolEffectiveness(protocolId: string): Promise<any>
 export async function getUserProtocolProgress(userProtocolId: string): Promise<any> {
   console.log(`Fetching progress for user protocol: ${userProtocolId}`);
   return authenticatedRequest<any>(`/api/v1/user-protocols/${userProtocolId}/progress`);
+}
+
+export interface TrendAnalysisRequest {
+  metric_type: string;
+  time_period: string;
+}
+
+export interface HealthInsightRequest {
+  query: string;
+  metric_types?: string[];
+  update_memory?: boolean;
+  time_frame?: string;
+}
+
+export async function getHealthInsight(query: string, metric_types?: string[], time_frame: string = "last_day", update_memory: boolean = true): Promise<any> {
+  console.log(`Fetching health insight for query: "${query}", metrics: ${metric_types?.join(', ') || 'all'}, time_frame: ${time_frame}`);
+  const userId = await AsyncStorage.getItem(USER_ID_KEY);
+  if (!userId) {
+    console.error('User ID not found in AsyncStorage. Make sure you are logged in and have completed the authentication flow.');
+    throw new Error('User ID not found. Please log out and log in again to fix this issue.');
+  }
+  
+  const requestData: HealthInsightRequest = {
+    query,
+    metric_types,
+    update_memory,
+    time_frame
+  };
+  
+  return authenticatedRequest<any>(`/api/v1/ai/insights/${userId}`, 'POST', requestData);
+}
+
+export async function getTrendAnalysis(metric_type: string, time_period: string = "last_week"): Promise<any> {
+  console.log(`Fetching trend analysis for metric: ${metric_type}, time period: ${time_period}`);
+  const userId = await AsyncStorage.getItem(USER_ID_KEY);
+  if (!userId) {
+    console.error('User ID not found in AsyncStorage. Make sure you are logged in and have completed the authentication flow.');
+    throw new Error('User ID not found. Please log out and log in again to fix this issue.');
+  }
+  
+  // Map UI time periods to API time periods
+  let apiTimePeriod = time_period;
+  if (time_period === 'last_day') {
+    apiTimePeriod = 'last_day';
+  } else if (time_period === 'last_week') {
+    apiTimePeriod = 'last_week';
+  }
+  
+  const requestData: TrendAnalysisRequest = {
+    metric_type,
+    time_period: apiTimePeriod
+  };
+  
+  return authenticatedRequest<any>(`/api/v1/ai/trends/${userId}`, 'POST', requestData);
 }
 
 // Function to check if the 'me' endpoint works, which indicates if the API is properly configured
