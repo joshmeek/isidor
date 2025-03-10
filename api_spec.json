@@ -569,7 +569,7 @@
           "AI"
         ],
         "summary": "Get Health Insight",
-        "description": "Generate a health insight using Gemini AI with RAG.",
+        "description": "Generate a health insight using Gemini AI with RAG.\n\nReturns a response with:\n- response: The AI-generated insight\n- has_data: Boolean indicating if relevant health data was found\n- metadata: Additional information about the request and response",
         "operationId": "get_health_insight_api_v1_ai_insights__user_id__post",
         "security": [
           {
@@ -632,7 +632,7 @@
           "AI"
         ],
         "summary": "Get Protocol Recommendation",
-        "description": "Generate a protocol recommendation using Gemini AI.",
+        "description": "Generate a protocol recommendation using Gemini AI.\n\nReturns a response with:\n- protocol_recommendation: The AI-generated protocol recommendation\n- has_data: Boolean indicating if relevant health data was found\n- metadata: Additional information about the request and response",
         "operationId": "get_protocol_recommendation_api_v1_ai_protocols__user_id__post",
         "security": [
           {
@@ -695,7 +695,7 @@
           "AI"
         ],
         "summary": "Get Trend Analysis",
-        "description": "Analyze health trends for a specific metric using Gemini AI.",
+        "description": "Analyze health trends for a specific metric using Gemini AI.\n\nReturns a response with:\n- trend_analysis: The AI-generated trend analysis\n- has_data: Boolean indicating if relevant health data was found\n- metadata: Additional information about the request and response",
         "operationId": "get_trend_analysis_api_v1_ai_trends__user_id__post",
         "security": [
           {
@@ -2393,7 +2393,7 @@
     "/health": {
       "get": {
         "summary": "Health Check",
-        "description": "Health check endpoint for monitoring.\n\nReturns:\n    A simple JSON response indicating the API is healthy.\n    \nExample:\n    ```json\n    {\n        \"status\": \"healthy\"\n    }\n    ```",
+        "description": "Health check endpoint for monitoring.\n\nReturns:\n    A simple JSON response indicating the API is healthy.\n\nExample:\n    ```json\n    {\n        \"status\": \"healthy\"\n    }\n    ```",
         "operationId": "health_check_health_get",
         "responses": {
           "200": {
