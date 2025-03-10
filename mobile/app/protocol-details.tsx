@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useAuth } from '@/contexts/AuthContext';
-import * as api from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ThemedText, ThemedView, Button, Card } from '@/components/ui';
+import { useAuth } from '@/contexts/AuthContext';
+import * as api from '@/services/api';
+import { spacing } from '@/constants/Spacing';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Types for protocols
 interface Protocol {
@@ -39,6 +40,13 @@ export default function ProtocolDetailsScreen() {
   const [userProtocol, setUserProtocol] = useState<UserProtocol | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get theme colors
+  const primaryColor = useThemeColor({}, 'primary') as string;
+  const secondaryColor = useThemeColor({}, 'secondary') as string;
+  const backgroundColor = useThemeColor({}, 'backgroundSecondary') as string;
+  const successColor = useThemeColor({}, 'success') as string;
+  const errorColor = useThemeColor({}, 'error') as string;
 
   // Load protocol details
   useEffect(() => {
@@ -77,18 +85,84 @@ export default function ProtocolDetailsScreen() {
     router.back();
   };
 
+  // Add the missing calculation functions
+  const calculateProgress = () => {
+    if (!userProtocol || !userProtocol.protocol || userProtocol.protocol.duration_type !== 'fixed') {
+      return 0;
+    }
+    
+    const startDate = new Date(userProtocol.start_date);
+    const today = new Date();
+    const totalDays = userProtocol.protocol.duration_days;
+    
+    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.min(1, Math.max(0, daysPassed / totalDays));
+  };
+
+  const calculateDaysPassed = () => {
+    if (!userProtocol) return 0;
+    
+    const startDate = new Date(userProtocol.start_date);
+    const today = new Date();
+    
+    return Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const calculateDaysLeft = () => {
+    if (!userProtocol || !userProtocol.protocol || userProtocol.protocol.duration_type !== 'fixed') {
+      return 0;
+    }
+    
+    const startDate = new Date(userProtocol.start_date);
+    const today = new Date();
+    const totalDays = userProtocol.protocol.duration_days;
+    
+    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, totalDays - daysPassed);
+  };
+
+  const updateProtocolStatus = async (status: string) => {
+    try {
+      console.log(`Updating protocol status to: ${status}`);
+      setIsLoading(true);
+      
+      // Here you would call your API to update the protocol status
+      // For example: await api.updateProtocolStatus(userProtocol.id, status);
+      
+      // For now, let's just update the local state
+      setUserProtocol(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status,
+          end_date: new Date().toISOString().split('T')[0]
+        };
+      });
+      
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error updating protocol status:', err);
+      setError('Failed to update protocol status');
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#0a7ea4" />
+            <Ionicons name="chevron-back" size={24} color="#0066CC" />
           </TouchableOpacity>
-          <ThemedText style={styles.title}>Protocol Details</ThemedText>
+          <ThemedText variant="headingMedium" style={styles.title}>
+            Protocol Details
+          </ThemedText>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0a7ea4" />
-          <ThemedText style={styles.loadingText}>Loading protocol details...</ThemedText>
+          <ActivityIndicator size="large" color="#0066CC" />
+          <ThemedText variant="bodyMedium" style={styles.loadingText}>
+            Loading protocol details...
+          </ThemedText>
         </View>
       </ThemedView>
     );
@@ -99,17 +173,24 @@ export default function ProtocolDetailsScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#0a7ea4" />
+            <Ionicons name="chevron-back" size={24} color="#0066CC" />
           </TouchableOpacity>
-          <ThemedText style={styles.title}>Protocol Details</ThemedText>
+          <ThemedText variant="headingMedium" style={styles.title}>
+            Protocol Details
+          </ThemedText>
         </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
-          <ThemedText style={styles.errorText}>{error || 'Protocol not found'}</ThemedText>
-          <TouchableOpacity style={styles.retryButton} onPress={handleBack}>
-            <ThemedText style={styles.retryButtonText}>Go Back</ThemedText>
-          </TouchableOpacity>
-        </View>
+        <Card style={styles.errorCard}>
+          <ThemedText variant="bodyMedium" style={styles.errorText}>
+            {error || 'Protocol not found'}
+          </ThemedText>
+          <Button 
+            title="Go Back" 
+            onPress={handleBack} 
+            variant="primary"
+            size="md"
+            leftIcon="arrow-back"
+          />
+        </Card>
       </ThemedView>
     );
   }
@@ -118,112 +199,183 @@ export default function ProtocolDetailsScreen() {
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#0a7ea4" />
+          <Ionicons name="chevron-back" size={24} color="#0066CC" />
         </TouchableOpacity>
-        <ThemedText style={styles.title}>Protocol Details</ThemedText>
+        <ThemedText variant="headingMedium" style={styles.title}>
+          Protocol Details
+        </ThemedText>
       </View>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Protocol Header */}
-        <LinearGradient
-          colors={['#1a2a6c', '#b21f1f']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.protocolHeader}
-        >
-          <ThemedText style={styles.protocolName}>
-            {userProtocol.protocol?.name || 'Unnamed Protocol'}
-          </ThemedText>
-          <View style={styles.statusBadge}>
-            <ThemedText style={styles.statusText}>
-              {userProtocol.status}
+        <Card style={styles.protocolCard}>
+          <View style={styles.protocolHeader}>
+            <ThemedText variant="displaySmall" style={styles.protocolName}>
+              {userProtocol.protocol?.name || 'Unnamed Protocol'}
             </ThemedText>
-          </View>
-        </LinearGradient>
-
-        {/* Protocol Details */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Description</ThemedText>
-          <ThemedText style={styles.description}>
-            {userProtocol.protocol?.description || 'No description available'}
-          </ThemedText>
-        </View>
-
-        {/* Protocol Dates */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Timeline</ThemedText>
-          <View style={styles.dateRow}>
-            <View style={styles.dateIconContainer}>
-              <Ionicons name="calendar-outline" size={20} color="#0a7ea4" />
-            </View>
-            <View style={styles.dateInfo}>
-              <ThemedText style={styles.dateLabel}>Start Date</ThemedText>
-              <ThemedText style={styles.dateValue}>{userProtocol.start_date}</ThemedText>
-            </View>
-          </View>
-          {userProtocol.end_date && (
-            <View style={styles.dateRow}>
-              <View style={styles.dateIconContainer}>
-                <Ionicons name="calendar-outline" size={20} color="#0a7ea4" />
-              </View>
-              <View style={styles.dateInfo}>
-                <ThemedText style={styles.dateLabel}>End Date</ThemedText>
-                <ThemedText style={styles.dateValue}>{userProtocol.end_date}</ThemedText>
-              </View>
-            </View>
-          )}
-          <View style={styles.dateRow}>
-            <View style={styles.dateIconContainer}>
-              <Ionicons name="time-outline" size={20} color="#0a7ea4" />
-            </View>
-            <View style={styles.dateInfo}>
-              <ThemedText style={styles.dateLabel}>Duration</ThemedText>
-              <ThemedText style={styles.dateValue}>
-                {userProtocol.protocol?.duration_days || 0} days
+            <View style={[
+              styles.statusBadge, 
+              { 
+                backgroundColor: 
+                  userProtocol.status === 'completed' ? successColor :
+                  userProtocol.status === 'abandoned' ? errorColor : 
+                  primaryColor 
+              }
+            ]}>
+              <ThemedText variant="labelSmall" style={styles.statusText}>
+                {userProtocol.status.replace('_', ' ').toUpperCase()}
               </ThemedText>
             </View>
           </View>
-        </View>
 
-        {/* Target Metrics */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Target Metrics</ThemedText>
-          <View style={styles.metricsContainer}>
-            {userProtocol.protocol?.target_metrics?.map((metric, index) => (
-              <View key={index} style={styles.metricBadge}>
-                <ThemedText style={styles.metricText}>{metric}</ThemedText>
+          <ThemedText variant="bodyMedium" style={styles.protocolDescription}>
+            {userProtocol.protocol?.description || 'No description available'}
+          </ThemedText>
+
+          {/* Protocol Details */}
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <ThemedText variant="labelMedium" style={styles.detailLabel}>
+                Started:
+              </ThemedText>
+              <ThemedText variant="bodyMedium">
+                {new Date(userProtocol.start_date).toLocaleDateString()}
+              </ThemedText>
+            </View>
+            
+            {userProtocol.end_date && (
+              <View style={styles.detailRow}>
+                <ThemedText variant="labelMedium" style={styles.detailLabel}>
+                  Ends:
+                </ThemedText>
+                <ThemedText variant="bodyMedium">
+                  {new Date(userProtocol.end_date).toLocaleDateString()}
+                </ThemedText>
               </View>
-            )) || (
-              <ThemedText style={styles.noMetricsText}>No target metrics specified</ThemedText>
+            )}
+            
+            {userProtocol.protocol?.duration_type === 'fixed' && (
+              <View style={styles.detailRow}>
+                <ThemedText variant="labelMedium" style={styles.detailLabel}>
+                  Duration:
+                </ThemedText>
+                <ThemedText variant="bodyMedium">
+                  {userProtocol.protocol.duration_days} days
+                </ThemedText>
+              </View>
+            )}
+            
+            {userProtocol.protocol?.target_metrics && (
+              <View style={styles.detailRow}>
+                <ThemedText variant="labelMedium" style={styles.detailLabel}>
+                  Target Metrics:
+                </ThemedText>
+                <View style={styles.metricsContainer}>
+                  {userProtocol.protocol.target_metrics.map((metric, index) => (
+                    <View key={index} style={styles.metricBadge}>
+                      <ThemedText variant="labelSmall" style={styles.metricText}>
+                        {metric.replace('_', ' ').toUpperCase()}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              </View>
             )}
           </View>
-        </View>
+        </Card>
 
-        {/* Actions */}
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => {
-              console.log('View Progress button pressed');
-              // You can implement progress view here
-            }}
-          >
-            <Ionicons name="analytics-outline" size={20} color="#fff" />
-            <ThemedText style={styles.actionButtonText}>View Progress</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.secondaryActionButton]}
-            onPress={() => {
-              console.log('End Protocol button pressed');
-              // You can implement protocol ending here
-            }}
-          >
-            <Ionicons name="close-outline" size={20} color="#e74c3c" />
-            <ThemedText style={styles.secondaryActionButtonText}>End Protocol</ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.spacer} />
+        {/* Progress Section */}
+        <ThemedText variant="headingMedium" style={styles.sectionTitle}>
+          Progress
+        </ThemedText>
+        
+        <Card style={styles.progressCard}>
+          {userProtocol.status === 'active' && (
+            <>
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${calculateProgress() * 100}%` }
+                    ]} 
+                  />
+                </View>
+                <ThemedText variant="bodySmall" style={styles.progressText}>
+                  {Math.round(calculateProgress() * 100)}% Complete
+                </ThemedText>
+              </View>
+              
+              <View style={styles.daysContainer}>
+                <View style={styles.dayInfo}>
+                  <ThemedText variant="headingSmall" style={styles.dayNumber}>
+                    {calculateDaysPassed()}
+                  </ThemedText>
+                  <ThemedText variant="caption" secondary>
+                    Days Passed
+                  </ThemedText>
+                </View>
+                
+                <View style={styles.dayInfo}>
+                  <ThemedText variant="headingSmall" style={styles.dayNumber}>
+                    {calculateDaysLeft()}
+                  </ThemedText>
+                  <ThemedText variant="caption" secondary>
+                    Days Left
+                  </ThemedText>
+                </View>
+              </View>
+              
+              <View style={styles.buttonContainer}>
+                {userProtocol.status === 'active' && (
+                  <>
+                    <Button
+                      title="Complete Protocol"
+                      onPress={() => updateProtocolStatus('completed')}
+                      variant="primary"
+                      leftIcon="checkmark-circle"
+                      style={styles.actionButton}
+                    />
+                    <Button
+                      title="Abandon Protocol"
+                      onPress={() => updateProtocolStatus('abandoned')}
+                      variant="destructive"
+                      leftIcon="close-circle"
+                      style={styles.actionButton}
+                    />
+                  </>
+                )}
+              </View>
+            </>
+          )}
+          
+          {userProtocol.status === 'completed' && (
+            <View style={styles.completedContainer}>
+              <Ionicons name="checkmark-circle" size={48} color={successColor} />
+              <ThemedText variant="headingMedium" style={styles.completedText}>
+                Protocol Completed
+              </ThemedText>
+              <ThemedText variant="bodyMedium" secondary style={styles.completedDate}>
+                Completed on {new Date(userProtocol.end_date || '').toLocaleDateString()}
+              </ThemedText>
+            </View>
+          )}
+          
+          {userProtocol.status === 'abandoned' && (
+            <View style={styles.abandonedContainer}>
+              <Ionicons name="close-circle" size={48} color={errorColor} />
+              <ThemedText variant="headingMedium" style={styles.abandonedText}>
+                Protocol Abandoned
+              </ThemedText>
+              <ThemedText variant="bodyMedium" secondary style={styles.abandonedDate}>
+                Abandoned on {new Date(userProtocol.end_date || '').toLocaleDateString()}
+              </ThemedText>
+            </View>
+          )}
+        </Card>
       </ScrollView>
     </ThemedView>
   );
@@ -232,177 +384,208 @@ export default function ProtocolDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
   header: {
-    marginTop: 40,
-    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   backButton: {
-    marginRight: 16,
+    marginRight: spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
-  protocolHeader: {
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-  },
-  protocolName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  statusBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  dateIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  dateInfo: {
-    flex: 1,
-  },
-  dateLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  dateValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  metricsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  metricBadge: {
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  metricText: {
-    fontSize: 14,
-    color: '#0a7ea4',
-    fontWeight: '500',
-  },
-  noMetricsText: {
-    fontSize: 16,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  actionsContainer: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  actionButton: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  secondaryActionButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#e74c3c',
-  },
-  secondaryActionButtonText: {
-    color: '#e74c3c',
-    fontWeight: 'bold',
-    fontSize: 16,
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing['3xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.xl,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.md,
+    color: '#667085',
+    textAlign: 'center',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  errorCard: {
+    margin: spacing.md,
+    padding: spacing.lg,
+    borderRadius: spacing.md,
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
   },
   errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#e74c3c',
+    marginBottom: spacing.md,
     textAlign: 'center',
-    marginBottom: 24,
+    color: '#667085',
   },
-  retryButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  protocolCard: {
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: '#FFFFFF',
   },
-  spacer: {
-    height: 40,
+  protocolHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  protocolName: {
+    fontSize: 22,
+    fontWeight: '700',
+    flex: 1,
+    color: '#000000',
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.md,
+    marginLeft: spacing.sm,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  protocolDescription: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#333333',
+    marginBottom: spacing.md,
+  },
+  detailsContainer: {
+    marginBottom: spacing.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: spacing.sm,
+    color: '#667085',
+    width: 100,
+  },
+  metricsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  metricBadge: {
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: spacing.sm,
+  },
+  metricText: {
+    color: '#0066CC',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  progressCard: {
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: '#FFFFFF',
+  },
+  progressBarContainer: {
+    marginBottom: spacing.md,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0066CC',
+  },
+  progressText: {
+    marginTop: spacing.xs,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333333',
+    textAlign: 'right',
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  dayInfo: {
+    alignItems: 'center',
+  },
+  dayNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: spacing.xs,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: spacing.xs,
+  },
+  completedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  completedText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  completedDate: {
+    fontSize: 14,
+    color: '#667085',
+  },
+  abandonedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  abandonedText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  abandonedDate: {
+    fontSize: 14,
+    color: '#667085',
   },
 }); 

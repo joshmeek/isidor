@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, Switch, Alert, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemedText, ThemedView, Button, Card } from '@/components/ui';
+import { useAuth } from '@/contexts/AuthContext';
+import { spacing } from '@/constants/Spacing';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function ProfileScreen() {
   console.log('Rendering ProfileScreen');
   const { user, logout } = useAuth();
+  
+  // Get theme colors
+  const primaryColor = useThemeColor({}, 'primary') as string;
+  const secondaryColor = useThemeColor({}, 'secondary') as string;
+  const backgroundColor = useThemeColor({}, 'backgroundSecondary') as string;
   
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -47,44 +53,51 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>Profile</ThemedText>
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <ThemedText variant="displaySmall" style={styles.title}>
+          Profile
+        </ThemedText>
 
-      <ScrollView style={styles.scrollView}>
         {/* User Info Section */}
-        <View style={styles.section}>
+        <Card style={styles.userInfoCard}>
           <View style={styles.userInfoContainer}>
             <View style={styles.avatarContainer}>
-              <ThemedText style={styles.avatarText}>
+              <ThemedText variant="displayMedium" style={styles.avatarText}>
                 {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
               </ThemedText>
             </View>
             <View style={styles.userDetails}>
-              <ThemedText style={styles.userName}>
+              <ThemedText variant="headingMedium" style={styles.userName}>
                 {user?.email ? user.email.split('@')[0] : 'User'}
               </ThemedText>
-              <ThemedText style={styles.userEmail}>
+              <ThemedText variant="bodyMedium" secondary style={styles.userEmail}>
                 {user?.email || 'No email available'}
               </ThemedText>
             </View>
           </View>
-        </View>
+        </Card>
 
         {/* Settings Section */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Settings</ThemedText>
-          
+        <ThemedText variant="headingMedium" style={styles.sectionTitle}>
+          Settings
+        </ThemedText>
+        
+        <Card style={styles.settingsCard}>
           {/* Notifications */}
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
-              <Ionicons name="notifications-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.settingLabel}>Notifications</ThemedText>
+              <Ionicons name="notifications" size={20} color={primaryColor} />
+              <ThemedText variant="bodyMedium" style={styles.settingLabel}>
+                Notifications
+              </ThemedText>
             </View>
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#d1d1d1', true: '#0a7ea4' }}
+              trackColor={{ false: '#d1d1d1', true: primaryColor }}
               thumbColor="#fff"
             />
           </View>
@@ -92,13 +105,15 @@ export default function ProfileScreen() {
           {/* HealthKit Sync */}
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
-              <Ionicons name="heart-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.settingLabel}>HealthKit Sync</ThemedText>
+              <Ionicons name="heart" size={20} color={primaryColor} />
+              <ThemedText variant="bodyMedium" style={styles.settingLabel}>
+                HealthKit Sync
+              </ThemedText>
             </View>
             <Switch
               value={healthKitSync}
               onValueChange={setHealthKitSync}
-              trackColor={{ false: '#d1d1d1', true: '#0a7ea4' }}
+              trackColor={{ false: '#d1d1d1', true: primaryColor }}
               thumbColor="#fff"
             />
           </View>
@@ -106,125 +121,153 @@ export default function ProfileScreen() {
           {/* Dark Mode */}
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
-              <Ionicons name="moon-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.settingLabel}>Dark Mode</ThemedText>
+              <Ionicons name="moon" size={20} color={primaryColor} />
+              <ThemedText variant="bodyMedium" style={styles.settingLabel}>
+                Dark Mode
+              </ThemedText>
             </View>
             <Switch
               value={darkMode}
               onValueChange={setDarkMode}
-              trackColor={{ false: '#d1d1d1', true: '#0a7ea4' }}
+              trackColor={{ false: '#d1d1d1', true: primaryColor }}
               thumbColor="#fff"
             />
           </View>
-          
-          {/* AI Interaction Level */}
-          <View style={styles.aiSettingContainer}>
-            <View style={styles.settingLabelContainer}>
-              <Ionicons name="analytics-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.settingLabel}>AI Interaction Level</ThemedText>
-            </View>
-            
-            <View style={styles.aiLevelContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.aiLevelButton,
-                  aiInteraction === 'minimal' && styles.aiLevelButtonActive,
-                ]}
-                onPress={() => handleAiInteractionChange('minimal')}
-              >
-                <ThemedText
-                  style={[
-                    styles.aiLevelButtonText,
-                    aiInteraction === 'minimal' && styles.aiLevelButtonTextActive,
-                  ]}
-                >
-                  Minimal
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.aiLevelButton,
-                  aiInteraction === 'balanced' && styles.aiLevelButtonActive,
-                ]}
-                onPress={() => handleAiInteractionChange('balanced')}
-              >
-                <ThemedText
-                  style={[
-                    styles.aiLevelButtonText,
-                    aiInteraction === 'balanced' && styles.aiLevelButtonTextActive,
-                  ]}
-                >
-                  Balanced
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.aiLevelButton,
-                  aiInteraction === 'proactive' && styles.aiLevelButtonActive,
-                ]}
-                onPress={() => handleAiInteractionChange('proactive')}
-              >
-                <ThemedText
-                  style={[
-                    styles.aiLevelButtonText,
-                    aiInteraction === 'proactive' && styles.aiLevelButtonTextActive,
-                  ]}
-                >
-                  Proactive
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-            
-            <ThemedText style={styles.aiLevelDescription}>
-              {aiInteraction === 'minimal' && 'Minimal AI interaction with basic insights only.'}
-              {aiInteraction === 'balanced' && 'Balanced AI interaction with regular insights and suggestions.'}
-              {aiInteraction === 'proactive' && 'Proactive AI interaction with frequent insights and recommendations.'}
-            </ThemedText>
-          </View>
-        </View>
+        </Card>
 
-        {/* About Section */}
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>About</ThemedText>
-          
-          <TouchableOpacity style={styles.aboutRow}>
-            <View style={styles.aboutLabelContainer}>
-              <Ionicons name="information-circle-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.aboutLabel}>About Isidor</ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.aboutRow}>
-            <View style={styles.aboutLabelContainer}>
-              <Ionicons name="shield-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.aboutLabel}>Privacy Policy</ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#999" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.aboutRow}>
-            <View style={styles.aboutLabelContainer}>
-              <Ionicons name="document-text-outline" size={20} color="#0a7ea4" />
-              <ThemedText style={styles.aboutLabel}>Terms of Service</ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#999" />
-          </TouchableOpacity>
-          
-          <View style={styles.versionContainer}>
-            <ThemedText style={styles.versionText}>Version 1.0.0</ThemedText>
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#e74c3c" />
-          <ThemedText style={styles.logoutButtonText}>Logout</ThemedText>
-        </TouchableOpacity>
+        {/* AI Interaction Section */}
+        <ThemedText variant="headingMedium" style={styles.sectionTitle}>
+          AI Interaction
+        </ThemedText>
         
-        <View style={styles.spacer} />
+        <Card style={styles.aiCard}>
+          <ThemedText variant="bodyMedium" secondary style={styles.aiDescription}>
+            Choose how proactive you want Isidor's AI to be in providing insights and recommendations.
+          </ThemedText>
+          
+          <View style={styles.aiLevelsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.aiLevelButton,
+                aiInteraction === 'minimal' && styles.aiLevelButtonActive,
+              ]}
+              onPress={() => handleAiInteractionChange('minimal')}
+            >
+              <Ionicons 
+                name="analytics" 
+                size={24} 
+                color={aiInteraction === 'minimal' ? '#fff' : primaryColor} 
+              />
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.aiLevelButtonText,
+                  aiInteraction === 'minimal' && styles.aiLevelButtonTextActive,
+                ]}
+              >
+                Minimal
+              </ThemedText>
+              <ThemedText
+                variant="caption"
+                style={[
+                  styles.aiLevelDescription,
+                  aiInteraction === 'minimal' && styles.aiLevelDescriptionActive,
+                ]}
+              >
+                Data only, no suggestions
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.aiLevelButton,
+                aiInteraction === 'balanced' && styles.aiLevelButtonActive,
+              ]}
+              onPress={() => handleAiInteractionChange('balanced')}
+            >
+              <Ionicons 
+                name="analytics" 
+                size={24} 
+                color={aiInteraction === 'balanced' ? '#fff' : primaryColor} 
+              />
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.aiLevelButtonText,
+                  aiInteraction === 'balanced' && styles.aiLevelButtonTextActive,
+                ]}
+              >
+                Balanced
+              </ThemedText>
+              <ThemedText
+                variant="caption"
+                style={[
+                  styles.aiLevelDescription,
+                  aiInteraction === 'balanced' && styles.aiLevelDescriptionActive,
+                ]}
+              >
+                Occasional insights
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.aiLevelButton,
+                aiInteraction === 'proactive' && styles.aiLevelButtonActive,
+              ]}
+              onPress={() => handleAiInteractionChange('proactive')}
+            >
+              <Ionicons 
+                name="analytics" 
+                size={24} 
+                color={aiInteraction === 'proactive' ? '#fff' : primaryColor} 
+              />
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.aiLevelButtonText,
+                  aiInteraction === 'proactive' && styles.aiLevelButtonTextActive,
+                ]}
+              >
+                Proactive
+              </ThemedText>
+              <ThemedText
+                variant="caption"
+                style={[
+                  styles.aiLevelDescription,
+                  aiInteraction === 'proactive' && styles.aiLevelDescriptionActive,
+                ]}
+              >
+                Regular suggestions
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </Card>
+
+        {/* Account Section */}
+        <ThemedText variant="headingMedium" style={styles.sectionTitle}>
+          Account
+        </ThemedText>
+        
+        <Card style={styles.accountCard}>
+          <Button
+            title="Logout"
+            onPress={handleLogout}
+            variant="destructive"
+            leftIcon="log-out"
+            fullWidth
+          />
+        </Card>
+        
+        {/* App Info */}
+        <View style={styles.appInfo}>
+          <ThemedText variant="caption" secondary style={styles.appVersion}>
+            Isidor v1.0.0
+          </ThemedText>
+          <ThemedText variant="caption" secondary style={styles.appCopyright}>
+            © 2025 Isidor
+          </ThemedText>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -233,35 +276,23 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-  },
-  header: {
-    marginTop: 40,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
   },
   scrollView: {
     flex: 1,
   },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing['3xl'],
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+  title: {
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  userInfoCard: {
+    marginBottom: spacing.md,
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    backgroundColor: '#FFFFFF',
   },
   userInfoContainer: {
     flexDirection: 'row',
@@ -271,122 +302,121 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#0066CC',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: spacing.md,
   },
   avatarText: {
+    color: '#FFFFFF',
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
   },
   userDetails: {
-    marginLeft: 16,
+    flex: 1,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
   },
   userEmail: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: '#667085',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  settingsCard: {
+    marginBottom: spacing.md,
+    borderRadius: spacing.md,
+    padding: 0,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
   },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   settingLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   settingLabel: {
+    marginLeft: spacing.sm,
     fontSize: 16,
-    marginLeft: 12,
   },
-  aiSettingContainer: {
-    paddingVertical: 12,
+  aiCard: {
+    marginBottom: spacing.md,
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    backgroundColor: '#FFFFFF',
   },
-  aiLevelContainer: {
+  aiDescription: {
+    marginBottom: spacing.md,
+    color: '#667085',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  aiLevelsContainer: {
     flexDirection: 'row',
-    marginTop: 12,
-    marginBottom: 8,
-    gap: 8,
+    gap: spacing.sm,
   },
   aiLevelButton: {
     flex: 1,
-    paddingVertical: 8,
+    flexDirection: 'column',
     alignItems: 'center',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#0a7ea4',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderRadius: spacing.md,
+    borderWidth: 1.5,
+    borderColor: '#0066CC',
+    backgroundColor: '#FFFFFF',
   },
   aiLevelButtonActive: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#0066CC',
   },
   aiLevelButtonText: {
     fontSize: 14,
-    color: '#0a7ea4',
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#0066CC',
+    marginTop: spacing.xs,
   },
   aiLevelButtonTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   aiLevelDescription: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 8,
-    fontStyle: 'italic',
+    color: '#667085',
+    textAlign: 'center',
+    marginTop: spacing.xs,
   },
-  aboutRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  aiLevelDescriptionActive: {
+    color: '#FFFFFF',
+  },
+  accountCard: {
+    marginBottom: spacing.md,
+    borderRadius: spacing.md,
+    padding: spacing.md,
+    backgroundColor: '#FFFFFF',
+  },
+  appInfo: {
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    marginTop: spacing.lg,
   },
-  aboutLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  aboutLabel: {
-    fontSize: 16,
-    marginLeft: 12,
-  },
-  versionContainer: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  versionText: {
+  appVersion: {
     fontSize: 12,
-    color: '#999',
+    color: '#667085',
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#e74c3c',
-    marginLeft: 8,
-  },
-  spacer: {
-    height: 40,
+  appCopyright: {
+    fontSize: 12,
+    color: '#667085',
+    marginTop: spacing.xs,
   },
 }); 

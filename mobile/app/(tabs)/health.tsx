@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, TextInput, Alert } from 'react-native';
-import { router } from 'expo-router';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
-import { Ionicons } from '@expo/vector-icons';
+import { spacing } from '@/constants/Spacing';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Types for health metrics
 interface HealthMetric {
@@ -23,6 +24,7 @@ interface HealthMetricInput {
   value: any;
   source: string;
   date: string;
+  user_id: string;
 }
 
 export default function HealthScreen() {
@@ -32,6 +34,17 @@ export default function HealthScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'view' | 'add'>('view');
+  
+  // Get URL parameters
+  const params = useLocalSearchParams();
+  const activeMetricTab = params.activeTab as string | undefined;
+  
+  // Get theme colors
+  const primaryColor = useThemeColor({}, 'primary') as string;
+  const secondaryColor = useThemeColor({}, 'secondary') as string;
+  const backgroundColor = useThemeColor({}, 'backgroundSecondary') as string;
+  const errorColor = useThemeColor({}, 'error') as string;
+  const successColor = useThemeColor({}, 'success') as string;
   
   // Form state for adding new metrics
   const [metricType, setMetricType] = useState<'sleep' | 'activity' | 'heart_rate'>('sleep');
@@ -51,6 +64,13 @@ export default function HealthScreen() {
   // Heart rate metric values
   const [restingHr, setRestingHr] = useState('');
   const [hrv, setHrv] = useState('');
+
+  // Set active metric type from URL parameter if provided
+  useEffect(() => {
+    if (activeMetricTab && ['sleep', 'activity', 'heart_rate'].includes(activeMetricTab)) {
+      setMetricType(activeMetricTab as 'sleep' | 'activity' | 'heart_rate');
+    }
+  }, [activeMetricTab]);
 
   // Function to load data
   const loadData = async () => {
@@ -96,6 +116,14 @@ export default function HealthScreen() {
     try {
       setIsLoading(true);
       
+      // Validate date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(date)) {
+        Alert.alert('Error', 'Date must be in YYYY-MM-DD format');
+        setIsLoading(false);
+        return;
+      }
+      
       let metricValue: any = {};
       
       // Prepare the metric value based on the selected type
@@ -137,19 +165,26 @@ export default function HealthScreen() {
           }
           
           metricValue = {
-            resting_hr: parseInt(restingHr),
-            hrv: hrv ? parseInt(hrv) : 0
+            average_bpm: parseInt(restingHr),
+            resting_bpm: parseInt(restingHr),
+            hrv_ms: hrv ? parseFloat(hrv) : 0
           };
           break;
       }
+      
+      // Get the current user ID
+      const currentUser = await api.getCurrentUser();
       
       // Create the health metric object
       const healthMetric: HealthMetricInput = {
         metric_type: metricType,
         value: metricValue,
         source: 'manual',
-        date: date
+        date: date,
+        user_id: currentUser.id
       };
+      
+      console.log('Creating health metric:', healthMetric);
       
       // Submit the health metric
       await api.createHealthMetric(healthMetric);
@@ -161,10 +196,10 @@ export default function HealthScreen() {
       await loadData();
       setActiveTab('view');
       
+      // Show success message
       Alert.alert('Success', 'Health metric added successfully');
-      
-    } catch (err) {
-      console.error('Error submitting health metric:', err);
+    } catch (error) {
+      console.error('Error submitting health metric:', error);
       Alert.alert('Error', 'Failed to add health metric. Please try again.');
     } finally {
       setIsLoading(false);
@@ -184,12 +219,14 @@ export default function HealthScreen() {
     setHrv('');
   };
 
-  // Render the form for adding a new health metric
+  // Render the form to add new health metrics
   const renderAddForm = () => {
     return (
-      <View style={styles.formContainer}>
+      <Card style={styles.formContainer}>
         <View style={styles.formSection}>
-          <ThemedText style={styles.formSectionTitle}>Metric Type</ThemedText>
+          <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+            Metric Type
+          </ThemedText>
           <View style={styles.metricTypeSelector}>
             <TouchableOpacity
               style={[
@@ -199,14 +236,16 @@ export default function HealthScreen() {
               onPress={() => setMetricType('sleep')}
             >
               <Ionicons 
-                name="moon-outline" 
-                size={20} 
-                color={metricType === 'sleep' ? '#fff' : '#0a7ea4'} 
+                name="moon" 
+                size={24} 
+                color={metricType === 'sleep' ? '#fff' : '#5E5CE6'} 
               />
               <ThemedText
+                variant="labelMedium"
                 style={[
                   styles.metricTypeButtonText,
                   metricType === 'sleep' && styles.metricTypeButtonTextActive,
+                  { color: metricType === 'sleep' ? '#fff' : '#5E5CE6' }
                 ]}
               >
                 Sleep
@@ -217,18 +256,21 @@ export default function HealthScreen() {
               style={[
                 styles.metricTypeButton,
                 metricType === 'activity' && styles.metricTypeButtonActive,
+                { borderColor: '#FF9500' }
               ]}
               onPress={() => setMetricType('activity')}
             >
               <Ionicons 
-                name="walk-outline" 
-                size={20} 
-                color={metricType === 'activity' ? '#fff' : '#0a7ea4'} 
+                name="footsteps" 
+                size={24} 
+                color={metricType === 'activity' ? '#fff' : '#FF9500'} 
               />
               <ThemedText
+                variant="labelMedium"
                 style={[
                   styles.metricTypeButtonText,
                   metricType === 'activity' && styles.metricTypeButtonTextActive,
+                  { color: metricType === 'activity' ? '#fff' : '#FF9500' }
                 ]}
               >
                 Activity
@@ -239,18 +281,21 @@ export default function HealthScreen() {
               style={[
                 styles.metricTypeButton,
                 metricType === 'heart_rate' && styles.metricTypeButtonActive,
+                { borderColor: '#FF2D55' }
               ]}
               onPress={() => setMetricType('heart_rate')}
             >
               <Ionicons 
-                name="heart-outline" 
-                size={20} 
-                color={metricType === 'heart_rate' ? '#fff' : '#0a7ea4'} 
+                name="heart" 
+                size={24} 
+                color={metricType === 'heart_rate' ? '#fff' : '#FF2D55'} 
               />
               <ThemedText
+                variant="labelMedium"
                 style={[
                   styles.metricTypeButtonText,
                   metricType === 'heart_rate' && styles.metricTypeButtonTextActive,
+                  { color: metricType === 'heart_rate' ? '#fff' : '#FF2D55' }
                 ]}
               >
                 Heart Rate
@@ -260,23 +305,35 @@ export default function HealthScreen() {
         </View>
         
         <View style={styles.formSection}>
-          <ThemedText style={styles.formSectionTitle}>Date</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            keyboardType="default"
-          />
-          <ThemedText style={styles.inputHelper}>Format: YYYY-MM-DD (e.g., 2025-03-15)</ThemedText>
+          <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+            Date
+          </ThemedText>
+          <View style={styles.inputContainer}>
+            <ThemedText variant="labelSmall" style={styles.inputLabel}>
+              Date (YYYY-MM-DD)
+            </ThemedText>
+            <TextInput
+              style={styles.input}
+              value={date}
+              onChangeText={setDate}
+              placeholder="YYYY-MM-DD"
+            />
+            <ThemedText variant="caption" style={styles.inputHelper}>
+              Format: YYYY-MM-DD (e.g., 2023-10-15)
+            </ThemedText>
+          </View>
         </View>
         
         {metricType === 'sleep' && (
           <View style={styles.formSection}>
-            <ThemedText style={styles.formSectionTitle}>Sleep Details</ThemedText>
+            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+              Sleep Details
+            </ThemedText>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Duration (hours)*</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Duration (hours)
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={sleepDuration}
@@ -286,30 +343,36 @@ export default function HealthScreen() {
               />
             </View>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Deep Sleep (hours)</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Deep Sleep (hours)
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={deepSleep}
                 onChangeText={setDeepSleep}
-                placeholder="1.2"
+                placeholder="1.5"
                 keyboardType="decimal-pad"
               />
             </View>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>REM Sleep (hours)</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                REM Sleep (hours)
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={remSleep}
                 onChangeText={setRemSleep}
-                placeholder="1.8"
+                placeholder="2.0"
                 keyboardType="decimal-pad"
               />
             </View>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Sleep Score (0-100)</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Sleep Score (0-100)
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={sleepScore}
@@ -323,21 +386,27 @@ export default function HealthScreen() {
         
         {metricType === 'activity' && (
           <View style={styles.formSection}>
-            <ThemedText style={styles.formSectionTitle}>Activity Details</ThemedText>
+            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+              Activity Details
+            </ThemedText>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Steps*</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Steps
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={steps}
                 onChangeText={setSteps}
-                placeholder="8000"
+                placeholder="10000"
                 keyboardType="number-pad"
               />
             </View>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Active Calories</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Active Calories
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={activeCalories}
@@ -347,8 +416,10 @@ export default function HealthScreen() {
               />
             </View>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Active Minutes</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Active Minutes
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={activeMinutes}
@@ -362,10 +433,14 @@ export default function HealthScreen() {
         
         {metricType === 'heart_rate' && (
           <View style={styles.formSection}>
-            <ThemedText style={styles.formSectionTitle}>Heart Rate Details</ThemedText>
+            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+              Heart Rate Details
+            </ThemedText>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>Resting HR (bpm)*</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Average Heart Rate (bpm)
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={restingHr}
@@ -375,8 +450,10 @@ export default function HealthScreen() {
               />
             </View>
             
-            <View style={styles.inputRow}>
-              <ThemedText style={styles.inputLabel}>HRV (ms)</ThemedText>
+            <View style={styles.inputContainer}>
+              <ThemedText variant="labelSmall" style={styles.inputLabel}>
+                Heart Rate Variability (ms)
+              </ThemedText>
               <TextInput
                 style={styles.input}
                 value={hrv}
@@ -389,30 +466,27 @@ export default function HealthScreen() {
         )}
         
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.submitButton}
+          <Button
+            title="Add Health Metric"
             onPress={submitHealthMetric}
             disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <ThemedText style={styles.submitButtonText}>Add Health Metric</ThemedText>
-            )}
-          </TouchableOpacity>
+            isLoading={isLoading}
+            variant="primary"
+            fullWidth
+          />
           
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <Button
+            title="Cancel"
             onPress={() => {
               resetFormFields();
               setActiveTab('view');
             }}
             disabled={isLoading}
-          >
-            <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
-          </TouchableOpacity>
+            variant="outline"
+            fullWidth
+          />
         </View>
-      </View>
+      </Card>
     );
   };
 
@@ -420,16 +494,18 @@ export default function HealthScreen() {
   const renderHealthMetrics = () => {
     if (metrics.length === 0) {
       return (
-        <ThemedView style={styles.emptyContainer}>
-          <Ionicons name="analytics-outline" size={48} color="#999" />
-          <ThemedText style={styles.emptyText}>No health data available</ThemedText>
-          <TouchableOpacity 
-            style={styles.addDataButton}
-            onPress={() => setActiveTab('add')}
-          >
-            <ThemedText style={styles.addDataButtonText}>Add Health Data</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+        <Card style={styles.emptyCard}>
+          <ThemedText variant="bodyMedium" style={styles.emptyText}>
+            No health data available
+          </ThemedText>
+          <Button 
+            title="Add Health Data" 
+            onPress={() => setActiveTab('add')} 
+            variant="primary"
+            leftIcon="add"
+            style={styles.addButton}
+          />
+        </Card>
       );
     }
 
@@ -447,102 +523,243 @@ export default function HealthScreen() {
       new Date(b).getTime() - new Date(a).getTime()
     );
 
+    // Helper function to get icon and color for metric type
+    const getMetricTypeInfo = (type: string) => {
+      switch (type) {
+        case 'sleep':
+          return { 
+            icon: 'moon', 
+            color: '#5E5CE6', // Purple
+            bgColor: 'rgba(94, 92, 230, 0.1)' 
+          };
+        case 'activity':
+          return { 
+            icon: 'footsteps', 
+            color: '#FF9500', // Orange
+            bgColor: 'rgba(255, 149, 0, 0.1)' 
+          };
+        case 'heart_rate':
+          return { 
+            icon: 'heart', 
+            color: '#FF2D55', // Red
+            bgColor: 'rgba(255, 45, 85, 0.1)' 
+          };
+        case 'mood':
+          return { 
+            icon: 'happy', 
+            color: '#34C759', // Green
+            bgColor: 'rgba(52, 199, 89, 0.1)' 
+          };
+        case 'weight':
+          return { 
+            icon: 'fitness', 
+            color: '#AF52DE', // Purple
+            bgColor: 'rgba(175, 82, 222, 0.1)' 
+          };
+        case 'blood_pressure':
+          return { 
+            icon: 'pulse', 
+            color: '#FF3B30', // Red
+            bgColor: 'rgba(255, 59, 48, 0.1)' 
+          };
+        case 'blood_glucose':
+          return { 
+            icon: 'water', 
+            color: '#5AC8FA', // Blue
+            bgColor: 'rgba(90, 200, 250, 0.1)' 
+          };
+        case 'oxygen_saturation':
+          return { 
+            icon: 'fitness', 
+            color: '#007AFF', // Blue
+            bgColor: 'rgba(0, 122, 255, 0.1)' 
+          };
+        default:
+          return { 
+            icon: 'analytics', 
+            color: '#0066CC', // Primary blue
+            bgColor: 'rgba(0, 102, 204, 0.1)' 
+          };
+      }
+    };
+
+    // Helper function to format metric value
+    const formatMetricValue = (metric: HealthMetric) => {
+      try {
+        switch (metric.metric_type) {
+          case 'sleep':
+            const duration = metric.value.duration_hours?.toFixed(1) || '0';
+            return {
+              primary: `${duration} hrs`,
+              details: [
+                { label: 'Deep Sleep', value: `${metric.value.deep_sleep_hours?.toFixed(1) || '0'} hrs` },
+                { label: 'REM Sleep', value: `${metric.value.rem_sleep_hours?.toFixed(1) || '0'} hrs` },
+                { label: 'Score', value: `${metric.value.sleep_score || 'N/A'}` },
+              ]
+            };
+          case 'activity':
+            const steps = parseInt(metric.value.steps || '0');
+            return {
+              primary: `${steps.toLocaleString()} steps`,
+              details: [
+                { label: 'Active Calories', value: `${metric.value.active_calories || '0'} cal` },
+                { label: 'Active Minutes', value: `${metric.value.active_minutes || '0'} min` },
+              ]
+            };
+          case 'heart_rate':
+            const heartRate = metric.value.average_bpm || metric.value.resting_bpm || '0';
+            return {
+              primary: `${heartRate} bpm`,
+              details: [
+                { label: 'Resting HR', value: `${metric.value.resting_bpm || '0'} bpm` },
+                { label: 'HRV', value: `${metric.value.hrv_ms || '0'} ms` },
+              ]
+            };
+          case 'mood':
+            const score = metric.value.score || metric.value.rating || '0';
+            return {
+              primary: `${score}/10`,
+              details: [
+                { label: 'Notes', value: metric.value.notes || 'No notes' },
+                { label: 'Energy', value: `${metric.value.energy_level || metric.value.energy || 'N/A'}/10` },
+              ]
+            };
+          default:
+            // For unknown metric types, try to extract meaningful data
+            if (typeof metric.value === 'object') {
+              // Try to find a main value to display
+              const mainValue = 
+                metric.value.value || 
+                metric.value.score || 
+                metric.value.count || 
+                metric.value.average_bpm || 
+                'N/A';
+              
+              // Create details from other properties
+              const details = Object.entries(metric.value)
+                .filter(([key]) => key !== 'value' && key !== 'score' && key !== 'count' && key !== 'average_bpm')
+                .map(([key, value]) => ({
+                  label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                  value: typeof value === 'number' ? value.toString() : String(value)
+                }));
+              
+              return {
+                primary: mainValue.toString(),
+                details
+              };
+            }
+            
+            return {
+              primary: typeof metric.value === 'object' ? 
+                JSON.stringify(metric.value).substring(0, 30) + '...' : 
+                String(metric.value),
+              details: []
+            };
+        }
+      } catch (error) {
+        console.error('Error formatting metric value:', error, metric);
+        return { 
+          primary: 'Error', 
+          details: [{ label: 'Error', value: 'Could not format metric data' }] 
+        };
+      }
+    };
+
     return (
       <View style={styles.metricsContainer}>
-        {sortedDates.map(date => (
-          <View key={date} style={styles.dateSection}>
-            <ThemedText style={styles.dateHeader}>
-              {new Date(date).toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </ThemedText>
-            
-            {metricsByDate[date].map(metric => (
-              <View key={metric.id} style={styles.metricCard}>
-                <View style={styles.metricHeader}>
-                  <View style={styles.metricTypeContainer}>
-                    {metric.metric_type === 'sleep' && (
-                      <Ionicons name="moon-outline" size={20} color="#0a7ea4" />
-                    )}
-                    {metric.metric_type === 'activity' && (
-                      <Ionicons name="walk-outline" size={20} color="#0a7ea4" />
-                    )}
-                    {metric.metric_type === 'heart_rate' && (
-                      <Ionicons name="heart-outline" size={20} color="#0a7ea4" />
-                    )}
-                    <ThemedText style={styles.metricType}>
-                      {metric.metric_type.replace('_', ' ').toUpperCase()}
-                    </ThemedText>
-                  </View>
-                  <ThemedText style={styles.metricSource}>
-                    Source: {metric.source}
-                  </ThemedText>
-                </View>
-                
-                <View style={styles.metricContent}>
-                  {metric.metric_type === 'sleep' && (
-                    <View>
-                      <ThemedText style={styles.metricValue}>
-                        {metric.value.duration_hours.toFixed(1)} hours
-                      </ThemedText>
-                      <View style={styles.metricDetails}>
-                        <ThemedText style={styles.metricDetail}>
-                          Deep: {metric.value.deep_sleep_hours.toFixed(1)}h
-                        </ThemedText>
-                        <ThemedText style={styles.metricDetail}>
-                          REM: {metric.value.rem_sleep_hours.toFixed(1)}h
-                        </ThemedText>
-                        <ThemedText style={styles.metricDetail}>
-                          Score: {metric.value.sleep_score}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  )}
+        {sortedDates.map(date => {
+          // Format the date in a more readable way
+          const formattedDate = new Date(date).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          
+          // Sort metrics by type for consistent ordering
+          const sortedMetrics = [...metricsByDate[date]].sort((a, b) => 
+            a.metric_type.localeCompare(b.metric_type)
+          );
+          
+          return (
+            <View key={date} style={styles.dateSection}>
+              <ThemedText variant="headingSmall" style={styles.dateHeader}>
+                {formattedDate}
+              </ThemedText>
+              
+              <Card style={styles.dateCard}>
+                {sortedMetrics.map((metric, index) => {
+                  const typeInfo = getMetricTypeInfo(metric.metric_type);
+                  const formattedValue = formatMetricValue(metric);
                   
-                  {metric.metric_type === 'activity' && (
-                    <View>
-                      <ThemedText style={styles.metricValue}>
-                        {metric.value.steps.toLocaleString()} steps
-                      </ThemedText>
-                      <View style={styles.metricDetails}>
-                        <ThemedText style={styles.metricDetail}>
-                          Calories: {metric.value.active_calories}
-                        </ThemedText>
-                        <ThemedText style={styles.metricDetail}>
-                          Active: {metric.value.active_minutes} min
-                        </ThemedText>
+                  return (
+                    <View key={metric.id}>
+                      <View style={styles.metricRow}>
+                        <View style={styles.metricTypeContainer}>
+                          <View style={[styles.iconContainer, { backgroundColor: typeInfo.bgColor }]}>
+                            <Ionicons name={typeInfo.icon as any} size={20} color={typeInfo.color} />
+                          </View>
+                          <View>
+                            <ThemedText variant="labelMedium" style={styles.metricType}>
+                              {metric.metric_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </ThemedText>
+                            <ThemedText variant="caption" secondary style={styles.metricSource}>
+                              {metric.source.charAt(0).toUpperCase() + metric.source.slice(1)}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        
+                        <View style={styles.metricValueContainer}>
+                          <ThemedText variant="headingMedium" style={styles.metricValue}>
+                            {formattedValue.primary}
+                          </ThemedText>
+                        </View>
                       </View>
+                      
+                      {formattedValue.details.length > 0 && (
+                        <View style={styles.metricDetails}>
+                          {formattedValue.details.map((detail, detailIndex) => (
+                            <View key={detailIndex} style={styles.detailItem}>
+                              <ThemedText variant="labelSmall" secondary>
+                                {detail.label}:
+                              </ThemedText>
+                              <ThemedText variant="bodySmall" style={styles.detailValue}>
+                                {detail.value}
+                              </ThemedText>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                      
+                      {index < sortedMetrics.length - 1 && <View style={styles.divider} />}
                     </View>
-                  )}
-                  
-                  {metric.metric_type === 'heart_rate' && (
-                    <View>
-                      <ThemedText style={styles.metricValue}>
-                        {metric.value.resting_hr} bpm
-                      </ThemedText>
-                      <View style={styles.metricDetails}>
-                        <ThemedText style={styles.metricDetail}>
-                          HRV: {metric.value.hrv} ms
-                        </ThemedText>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
-            ))}
-          </View>
-        ))}
+                  );
+                })}
+              </Card>
+            </View>
+          );
+        })}
       </View>
     );
   };
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>Health Data</ThemedText>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[primaryColor as string]} 
+          />
+        }
+      >
+        <ThemedText variant="displaySmall" style={styles.title}>
+          Health Data
+        </ThemedText>
+        
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[
@@ -552,6 +769,7 @@ export default function HealthScreen() {
             onPress={() => setActiveTab('view')}
           >
             <ThemedText
+              variant="labelMedium"
               style={[
                 styles.tabButtonText,
                 activeTab === 'view' && styles.activeTabButtonText,
@@ -568,6 +786,7 @@ export default function HealthScreen() {
             onPress={() => setActiveTab('add')}
           >
             <ThemedText
+              variant="labelMedium"
               style={[
                 styles.tabButtonText,
                 activeTab === 'add' && styles.activeTabButtonText,
@@ -577,48 +796,36 @@ export default function HealthScreen() {
             </ThemedText>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {activeTab === 'view' ? (
-        isLoading && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0a7ea4" />
-            <ThemedText style={styles.loadingText}>Loading health data...</ThemedText>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
-            <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-              <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
-            </TouchableOpacity>
-          </View>
+        {activeTab === 'view' ? (
+          isLoading && !refreshing ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={primaryColor as string} />
+              <ThemedText variant="bodyMedium" style={styles.loadingText}>
+                Loading health data...
+              </ThemedText>
+            </View>
+          ) : error ? (
+            <Card style={styles.errorCard}>
+              <ThemedText variant="bodyMedium" style={styles.errorText}>
+                {error}
+              </ThemedText>
+              <Button 
+                title="Retry" 
+                onPress={loadData} 
+                variant="primary"
+                size="sm"
+                leftIcon="refresh"
+                style={styles.retryButton}
+              />
+            </Card>
+          ) : (
+            renderHealthMetrics()
+          )
         ) : (
-          <ScrollView
-            style={styles.scrollView}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-          >
-            {renderHealthMetrics()}
-            <View style={styles.spacer} />
-          </ScrollView>
-        )
-      ) : (
-        <ScrollView style={styles.scrollView}>
-          {renderAddForm()}
-          <View style={styles.spacer} />
-        </ScrollView>
-      )}
-      
-      {activeTab === 'view' && (
-        <TouchableOpacity
-          style={styles.floatingButton}
-          onPress={() => setActiveTab('add')}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
-      )}
+          renderAddForm()
+        )}
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -626,270 +833,218 @@ export default function HealthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-  },
-  header: {
-    marginTop: 40,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  activeTabButton: {
-    backgroundColor: '#0a7ea4',
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  activeTabButtonText: {
-    color: '#fff',
   },
   scrollView: {
     flex: 1,
   },
-  loadingContainer: {
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing['3xl'],
+  },
+  title: {
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tabButton: {
     flex: 1,
-    justifyContent: 'center',
+    paddingVertical: spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  activeTabButton: {
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+  },
+  tabButtonText: {
+    textAlign: 'center',
+  },
+  activeTabButtonText: {
+    color: '#0066CC',
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  errorCard: {
+    padding: spacing.lg,
     alignItems: 'center',
-    padding: 24,
+    justifyContent: 'center',
   },
   errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#e74c3c',
+    marginBottom: spacing.md,
     textAlign: 'center',
-    marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  addDataButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  addDataButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    marginTop: spacing.sm,
   },
   metricsContainer: {
     flexDirection: 'column',
-    gap: 16,
+    gap: spacing.md,
   },
   dateSection: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   dateHeader: {
+    marginBottom: spacing.sm,
+    color: '#667085',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#666',
+    fontWeight: '600',
   },
-  metricCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+  dateCard: {
+    padding: 0,
+    borderRadius: spacing.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    overflow: 'hidden',
   },
-  metricHeader: {
+  metricRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: spacing.md,
   },
   metricTypeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   metricType: {
     fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-    color: '#0a7ea4',
+    fontWeight: '500',
+    color: '#333',
   },
-  metricSource: {
-    fontSize: 12,
-    color: '#999',
-  },
-  metricContent: {
-    marginLeft: 28,
+  metricValueContainer: {
+    alignItems: 'flex-end',
   },
   metricValue: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#000',
+  },
+  metricSource: {
+    fontSize: 12,
+    color: '#667085',
   },
   metricDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-    gap: 8,
+    marginTop: 0,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderRadius: spacing.xs,
   },
-  metricDetail: {
-    fontSize: 14,
-    color: '#666',
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  detailValue: {
+    marginLeft: spacing.xs,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    marginHorizontal: spacing.md,
+  },
+  emptyCard: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  addButton: {
+    marginTop: spacing.sm,
   },
   formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: spacing.md,
+    borderRadius: spacing.md,
+    backgroundColor: '#FFFFFF',
   },
   formSection: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   formSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: spacing.md,
+    color: '#000',
   },
   metricTypeSelector: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   metricTypeButton: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#0a7ea4',
-    gap: 8,
+    paddingVertical: spacing.md,
+    borderRadius: spacing.md,
+    borderWidth: 1.5,
+    borderColor: '#5E5CE6',
+    gap: spacing.xs,
   },
   metricTypeButtonActive: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#5E5CE6',
   },
   metricTypeButtonText: {
     fontSize: 14,
-    color: '#0a7ea4',
     fontWeight: '500',
+    marginTop: spacing.xs,
   },
   metricTypeButtonTextActive: {
     color: '#fff',
   },
-  inputRow: {
-    marginBottom: 12,
+  inputContainer: {
+    marginBottom: spacing.md,
   },
   inputLabel: {
     fontSize: 14,
-    marginBottom: 4,
-    color: '#666',
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+    color: '#333',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: '#E4E7EC',
+    borderRadius: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     fontSize: 16,
+    backgroundColor: '#F9FAFB',
   },
   inputHelper: {
     fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+    marginTop: spacing.xs,
+    color: '#98A2B3',
   },
   buttonContainer: {
-    marginTop: 20,
-    gap: 12,
-  },
-  submitButton: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cancelButton: {
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#0a7ea4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  spacer: {
-    height: 80,
+    marginTop: spacing.lg,
+    gap: spacing.md,
   },
 }); 

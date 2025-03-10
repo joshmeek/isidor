@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Dimensions, Text } from 'react-native';
 import { router } from 'expo-router';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useAuth } from '@/contexts/AuthContext';
-import * as api from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
+import { useAuth } from '@/contexts/AuthContext';
+import * as api from '@/services/api';
+import { spacing } from '@/constants/Spacing';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Types for protocols
 interface Protocol {
@@ -37,6 +38,11 @@ export default function ProtocolsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'available' | 'enrolled'>('enrolled');
+
+  // Get theme colors
+  const primaryColor = useThemeColor({}, 'primary') as string;
+  const secondaryColor = useThemeColor({}, 'secondary') as string;
+  const backgroundColor = useThemeColor({}, 'backgroundSecondary') as string;
 
   // Function to load data
   const loadData = async () => {
@@ -104,52 +110,68 @@ export default function ProtocolsScreen() {
   const renderAvailableProtocols = () => {
     if (protocols.length === 0) {
       return (
-        <ThemedView style={styles.emptyContainer}>
-          <Ionicons name="list-outline" size={48} color="#999" />
-          <ThemedText style={styles.emptyText}>No available protocols</ThemedText>
-        </ThemedView>
+        <Card style={styles.emptyCard}>
+          <ThemedText variant="bodyMedium" style={styles.emptyText}>
+            No available protocols found
+          </ThemedText>
+        </Card>
       );
     }
 
     return (
       <View style={styles.protocolsContainer}>
-        {protocols.map((protocol) => (
-          <View key={protocol.id} style={styles.protocolCard}>
-            <ThemedText style={styles.protocolTitle}>{protocol.name}</ThemedText>
-            <ThemedText style={styles.protocolDescription}>{protocol.description}</ThemedText>
-            
-            <View style={styles.protocolDetails}>
-              <View style={styles.detailItem}>
-                <Ionicons name="time-outline" size={16} color="#0a7ea4" />
-                <ThemedText style={styles.detailText}>
-                  {protocol.duration_type === 'fixed' 
-                    ? `${protocol.duration_days} days` 
-                    : 'Ongoing'}
-                </ThemedText>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <Ionicons name="analytics-outline" size={16} color="#0a7ea4" />
-                <ThemedText style={styles.detailText}>
-                  {protocol.target_metrics.join(', ')}
-                </ThemedText>
-              </View>
-            </View>
-            
-            <TouchableOpacity 
-              style={[
-                styles.enrollButton,
-                isEnrolled(protocol.id) && styles.enrolledButton
-              ]}
-              onPress={() => enrollInProtocol(protocol.id)}
-              disabled={isEnrolled(protocol.id)}
+        {protocols.map((protocol) => {
+          const alreadyEnrolled = isEnrolled(protocol.id);
+          
+          // Determine which metrics this protocol targets
+          const targetIcons = protocol.target_metrics.map(metric => {
+            switch (metric) {
+              case 'sleep':
+                return { name: 'moon', color: '#5E5CE6' };
+              case 'activity':
+                return { name: 'footsteps', color: '#FF9500' };
+              case 'heart_rate':
+                return { name: 'heart', color: '#FF2D55' };
+              case 'mood':
+                return { name: 'happy', color: '#34C759' };
+              default:
+                return { name: 'analytics', color: primaryColor };
+            }
+          });
+
+          return (
+            <Card
+              key={protocol.id}
+              title={protocol.name}
+              subtitle={`${protocol.duration_days} days`}
+              leftIcon={<Ionicons name="list" size={24} color={secondaryColor} />}
+              style={styles.protocolCard}
+              onPress={() => router.push(`/protocol-details?id=${protocol.id}`)}
+              footer={
+                <View style={styles.protocolFooter}>
+                  <View style={styles.targetMetrics}>
+                    {targetIcons.map((icon, index) => (
+                      <View key={index} style={styles.metricIconContainer}>
+                        <Ionicons name={icon.name as any} size={16} color={icon.color} />
+                      </View>
+                    ))}
+                  </View>
+                  <Button
+                    title={alreadyEnrolled ? "Enrolled" : "Enroll"}
+                    variant={alreadyEnrolled ? "outline" : "primary"}
+                    size="sm"
+                    disabled={alreadyEnrolled}
+                    onPress={() => !alreadyEnrolled && enrollInProtocol(protocol.id)}
+                  />
+                </View>
+              }
             >
-              <ThemedText style={styles.enrollButtonText}>
-                {isEnrolled(protocol.id) ? 'Enrolled' : 'Enroll'}
+              <ThemedText variant="bodySmall" secondary numberOfLines={2} style={styles.protocolDescription}>
+                {protocol.description}
               </ThemedText>
-            </TouchableOpacity>
-          </View>
-        ))}
+            </Card>
+          );
+        })}
       </View>
     );
   };
@@ -158,166 +180,186 @@ export default function ProtocolsScreen() {
   const renderEnrolledProtocols = () => {
     if (userProtocols.length === 0) {
       return (
-        <ThemedView style={styles.emptyContainer}>
-          <Ionicons name="list-outline" size={48} color="#999" />
-          <ThemedText style={styles.emptyText}>You haven't enrolled in any protocols yet</ThemedText>
-          <TouchableOpacity 
+        <Card style={styles.emptyCard}>
+          <ThemedText variant="bodyMedium" style={styles.emptyText}>
+            You haven't enrolled in any protocols yet
+          </ThemedText>
+          <Button
+            title="Browse Protocols"
+            variant="primary"
+            size="md"
+            leftIcon="list"
             style={styles.browseButton}
             onPress={() => setActiveTab('available')}
-          >
-            <ThemedText style={styles.browseButtonText}>Browse Protocols</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+          />
+        </Card>
       );
     }
 
     return (
       <View style={styles.protocolsContainer}>
-        {userProtocols.map((userProtocol) => (
-          <TouchableOpacity 
-            key={userProtocol.id} 
-            style={styles.userProtocolCard}
-            onPress={() => {
-              // Navigate to protocol detail screen
-              console.log('Navigating to protocol details with ID:', userProtocol.id);
-              router.push({
-                pathname: "/protocol-details",
-                params: { id: userProtocol.id }
-              });
-            }}
-          >
-            <LinearGradient
-              colors={['#1a2a6c', '#b21f1f']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.protocolStatusBar}
-            />
-            
-            <View style={styles.userProtocolContent}>
-              <View style={styles.protocolCardHeader}>
-                <ThemedText style={styles.protocolCardTitle}>
-                  {userProtocol.protocol?.name || 'Unnamed Protocol'}
-                </ThemedText>
-                <View style={styles.statusBadge}>
-                  <ThemedText style={styles.statusText}>
-                    {userProtocol.status}
-                  </ThemedText>
-                </View>
-              </View>
-              
-              <ThemedText style={styles.protocolCardDescription}>
-                {userProtocol.protocol?.description || 'No description available'}
-              </ThemedText>
-              
-              <View style={styles.protocolCardDetails}>
-                <View style={styles.detailItem}>
-                  <Ionicons name="calendar-outline" size={16} color="#0a7ea4" />
-                  <ThemedText style={styles.detailText}>
-                    Started: {new Date(userProtocol.start_date).toLocaleDateString()}
-                  </ThemedText>
-                </View>
-                
-                {userProtocol.end_date && (
-                  <View style={styles.detailItem}>
-                    <Ionicons name="calendar-outline" size={16} color="#0a7ea4" />
-                    <ThemedText style={styles.detailText}>
-                      Ends: {new Date(userProtocol.end_date).toLocaleDateString()}
+        {userProtocols.map((userProtocol) => {
+          const protocol = userProtocol.protocol;
+          if (!protocol) return null;
+          
+          // Calculate progress
+          const startDate = new Date(userProtocol.start_date);
+          const endDate = userProtocol.end_date ? new Date(userProtocol.end_date) : null;
+          const today = new Date();
+          
+          let progress = 0;
+          let daysLeft = 0;
+          
+          if (protocol.duration_type === 'fixed' && protocol.duration_days > 0) {
+            const totalDays = protocol.duration_days;
+            const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            daysLeft = Math.max(0, totalDays - daysPassed);
+            progress = Math.min(1, Math.max(0, daysPassed / totalDays));
+          }
+          
+          // Format status for display
+          const statusText = userProtocol.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+          
+          // Determine status color
+          let statusColor = '#0066CC'; // Default blue
+          if (userProtocol.status === 'completed') {
+            statusColor = '#34C759'; // Green
+          } else if (userProtocol.status === 'abandoned') {
+            statusColor = '#FF3B30'; // Red
+          }
+          
+          return (
+            <Card
+              key={userProtocol.id}
+              title={protocol.name}
+              subtitle={`Started: ${new Date(userProtocol.start_date).toLocaleDateString()}`}
+              leftIcon={<Ionicons name="list" size={24} color={secondaryColor} />}
+              style={styles.protocolCard}
+              onPress={() => router.push(`/protocol-details?id=${userProtocol.id}`)}
+              footer={
+                <View style={styles.protocolFooter}>
+                  <View style={styles.statusContainer}>
+                    <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                    <ThemedText variant="caption" style={{ color: statusColor }}>
+                      {statusText}
                     </ThemedText>
                   </View>
-                )}
-                
-                {userProtocol.protocol?.target_metrics && (
-                  <View style={styles.detailItem}>
-                    <Ionicons name="analytics-outline" size={16} color="#0a7ea4" />
-                    <ThemedText style={styles.detailText}>
-                      Metrics: {userProtocol.protocol.target_metrics.join(', ')}
-                    </ThemedText>
+                  <Button
+                    title="View"
+                    variant="outline"
+                    size="sm"
+                    rightIcon="chevron-forward"
+                    onPress={() => router.push(`/protocol-details?id=${userProtocol.id}`)}
+                  />
+                </View>
+              }
+            >
+              {protocol.duration_type === 'fixed' && (
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <View 
+                      style={[
+                        styles.progressFill, 
+                        { width: `${progress * 100}%` },
+                        userProtocol.status === 'completed' && styles.progressCompleted
+                      ]} 
+                    />
                   </View>
-                )}
-              </View>
-              
-              <View style={styles.viewDetailsContainer}>
-                <Ionicons name="chevron-forward" size={16} color="#0a7ea4" />
-                <ThemedText style={styles.viewDetailsText}>View Details</ThemedText>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+                  <ThemedText variant="bodySmall" secondary>
+                    {userProtocol.status === 'completed' 
+                      ? 'Completed' 
+                      : userProtocol.status === 'abandoned'
+                        ? 'Abandoned'
+                        : `${daysLeft} days left`}
+                  </ThemedText>
+                </View>
+              )}
+            </Card>
+          );
+        })}
       </View>
     );
   };
 
-  // Show loading indicator
-  if (isLoading && !refreshing) {
-    return (
-      <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
-        <ThemedText style={styles.loadingText}>Loading protocols...</ThemedText>
-      </ThemedView>
-    );
-  }
-
+  // Update the main UI structure
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText style={styles.title}>Protocols</ThemedText>
-      </View>
-      
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 'enrolled' && styles.activeTabButton,
-          ]}
-          onPress={() => setActiveTab('enrolled')}
-        >
-          <ThemedText
-            style={[
-              styles.tabButtonText,
-              activeTab === 'enrolled' && styles.activeTabButtonText,
-            ]}
-          >
-            My Protocols
-          </ThemedText>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 'available' && styles.activeTabButton,
-          ]}
-          onPress={() => setActiveTab('available')}
-        >
-          <ThemedText
-            style={[
-              styles.tabButtonText,
-              activeTab === 'available' && styles.activeTabButtonText,
-            ]}
-          >
-            Available
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-      
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[primaryColor]} 
+          />
         }
       >
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
-            <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-              <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
-            </TouchableOpacity>
+        <ThemedText variant="displaySmall" style={styles.title}>
+          Protocols
+        </ThemedText>
+        
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'enrolled' && styles.activeTabButton,
+            ]}
+            onPress={() => setActiveTab('enrolled')}
+          >
+            <ThemedText
+              variant="labelMedium"
+              style={[
+                styles.tabButtonText,
+                activeTab === 'enrolled' && styles.activeTabButtonText,
+              ]}
+            >
+              My Protocols
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'available' && styles.activeTabButton,
+            ]}
+            onPress={() => setActiveTab('available')}
+          >
+            <ThemedText
+              variant="labelMedium"
+              style={[
+                styles.tabButtonText,
+                activeTab === 'available' && styles.activeTabButtonText,
+              ]}
+            >
+              Available
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={primaryColor} />
+            <ThemedText variant="bodyMedium" style={styles.loadingText}>
+              Loading protocols...
+            </ThemedText>
           </View>
+        ) : error ? (
+          <Card style={styles.errorCard}>
+            <ThemedText variant="bodyMedium" style={styles.errorText}>
+              {error}
+            </ThemedText>
+            <Button 
+              title="Retry" 
+              onPress={loadData} 
+              variant="primary"
+              size="sm"
+              leftIcon="refresh"
+              style={styles.retryButton}
+            />
+          </Card>
         ) : (
           activeTab === 'enrolled' ? renderEnrolledProtocols() : renderAvailableProtocols()
         )}
-        
-        <View style={styles.spacer} />
       </ScrollView>
     </ThemedView>
   );
@@ -326,212 +368,124 @@ export default function ProtocolsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-  },
-  header: {
-    marginTop: 40,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  activeTabButton: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-  },
-  activeTabButtonText: {
-    color: '#0a7ea4',
   },
   scrollView: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing['3xl'],
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+  title: {
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#e74c3c',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  browseButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  protocolsContainer: {
-    marginTop: 8,
-  },
-  protocolCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  protocolTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  protocolDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-  },
-  protocolDetails: {
-    marginBottom: 16,
-  },
-  detailItem: {
+  tabContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
-  },
-  enrollButton: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 10,
+    marginBottom: spacing.md,
     borderRadius: 8,
-    alignItems: 'center',
-  },
-  enrolledButton: {
-    backgroundColor: '#27ae60',
-  },
-  enrollButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  userProtocolCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
     overflow: 'hidden',
   },
-  protocolStatusBar: {
-    height: 8,
+  tabButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
-  userProtocolContent: {
-    padding: 16,
+  activeTabButton: {
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
   },
-  protocolCardHeader: {
+  tabButtonText: {
+    textAlign: 'center',
+  },
+  activeTabButtonText: {
+    color: '#0066CC',
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  errorCard: {
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: spacing.sm,
+  },
+  emptyCard: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  browseButton: {
+    marginTop: spacing.sm,
+  },
+  protocolsContainer: {
+    marginBottom: spacing.lg,
+  },
+  protocolCard: {
+    marginBottom: spacing.md,
+  },
+  protocolDescription: {
+    marginBottom: spacing.sm,
+  },
+  protocolFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  protocolCardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  statusBadge: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  protocolCardDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-  },
-  protocolCardDetails: {
-    marginBottom: 12,
-  },
-  viewDetailsContainer: {
+  targetMetrics: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
   },
-  viewDetailsText: {
-    color: '#0a7ea4',
-    fontWeight: '600',
-    marginLeft: 4,
+  metricIconContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
-  spacer: {
-    height: 40,
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  progressContainer: {
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 6,
+    backgroundColor: '#0a7ea4',
+  },
+  progressCompleted: {
+    backgroundColor: '#34C759',
   },
 }); 

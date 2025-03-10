@@ -351,6 +351,7 @@ export interface HealthMetricInput {
   value: any;
   source: string;
   date: string;
+  user_id: string;
 }
 
 export async function createHealthMetric(metricData: HealthMetricInput): Promise<any> {

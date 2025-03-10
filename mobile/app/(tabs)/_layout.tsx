@@ -1,15 +1,18 @@
 import React from 'react';
 import { Tabs, usePathname } from 'expo-router';
-import { useColorScheme, Platform } from 'react-native';
+import { useColorScheme, Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
+import { spacing } from '@/constants/Spacing';
 
 // Tab bar icon component
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof Ionicons>['name'];
   color: string;
+  size?: number;
 }) {
-  return <Ionicons size={24} style={{ marginBottom: -3 }} {...props} />;
+  const { size = 24, ...rest } = props;
+  return <Ionicons size={size} style={{ marginBottom: -3 }} {...rest} />;
 }
 
 export default function TabLayout() {
@@ -18,22 +21,49 @@ export default function TabLayout() {
   
   console.log('TabLayout rendering, current path:', pathname);
 
+  // Get colors from theme
+  const colors = Colors[colorScheme as 'light' | 'dark'];
+  const tabBackground = colors.tabBackground;
+  const tabActiveTintColor = colors.primary;
+  const tabInactiveTintColor = colors.tabIconDefault;
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme as 'light' | 'dark'].tint,
-        tabBarInactiveTintColor: '#888',
+        tabBarActiveTintColor: tabActiveTintColor,
+        tabBarInactiveTintColor: tabInactiveTintColor,
         tabBarStyle: {
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          height: 60,
-          paddingBottom: Platform.OS === 'ios' ? 10 : 5,
+          height: 88,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 5,
+          paddingTop: 10,
+          backgroundColor: tabBackground,
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -3 },
+              shadowOpacity: 0.05,
+              shadowRadius: 6,
+            },
+            android: {
+              elevation: 8,
+            },
+          }),
         },
         headerShown: false,
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '500',
+          marginTop: 4,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
         },
       }}
     >
@@ -41,7 +71,13 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => <TabBarIcon name="analytics-outline" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon 
+              name={focused ? "analytics" : "analytics-outline"} 
+              color={color} 
+              size={focused ? 26 : 24}
+            />
+          ),
           tabBarLabel: 'Dashboard',
         }}
         listeners={{
@@ -54,7 +90,13 @@ export default function TabLayout() {
         name="protocols"
         options={{
           title: 'Protocols',
-          tabBarIcon: ({ color }) => <TabBarIcon name="list-outline" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon 
+              name={focused ? "list" : "list-outline"} 
+              color={color} 
+              size={focused ? 26 : 24}
+            />
+          ),
           tabBarLabel: 'Protocols',
         }}
         listeners={{
@@ -67,7 +109,13 @@ export default function TabLayout() {
         name="health"
         options={{
           title: 'Health',
-          tabBarIcon: ({ color }) => <TabBarIcon name="heart-outline" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon 
+              name={focused ? "heart" : "heart-outline"} 
+              color={color} 
+              size={focused ? 26 : 24}
+            />
+          ),
           tabBarLabel: 'Health',
         }}
         listeners={{
@@ -80,7 +128,13 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <TabBarIcon name="person-outline" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon 
+              name={focused ? "person" : "person-outline"} 
+              color={color} 
+              size={focused ? 26 : 24}
+            />
+          ),
           tabBarLabel: 'Profile',
         }}
         listeners={{

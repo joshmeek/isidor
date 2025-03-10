@@ -1,31 +1,68 @@
-import { Text, type TextProps, StyleSheet } from 'react-native';
+import { Text, type TextProps, StyleSheet, ColorValue } from 'react-native';
 
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { TextStyles } from '@/constants/Typography';
+
+export type TextVariant = 
+  | 'displayLarge' 
+  | 'displayMedium' 
+  | 'displaySmall' 
+  | 'headingLarge' 
+  | 'headingMedium' 
+  | 'headingSmall' 
+  | 'bodyLarge' 
+  | 'bodyMedium' 
+  | 'bodySmall' 
+  | 'labelLarge' 
+  | 'labelMedium' 
+  | 'labelSmall' 
+  | 'caption' 
+  | 'button' 
+  | 'link';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  variant?: TextVariant;
+  secondary?: boolean;
+  tertiary?: boolean;
 };
 
 export function ThemedText({
   style,
   lightColor,
   darkColor,
-  type = 'default',
+  variant = 'bodyMedium',
+  secondary = false,
+  tertiary = false,
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  // Get the primary text color
+  const primaryColor = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  
+  // Get secondary and tertiary text colors
+  const secondaryColor = useThemeColor({}, 'textSecondary');
+  const tertiaryColor = useThemeColor({}, 'textTertiary');
+  
+  // Determine which color to use
+  const color = tertiary 
+    ? tertiaryColor 
+    : secondary 
+      ? secondaryColor 
+      : primaryColor;
+  
+  // Special case for link variant
+  const linkColor = useThemeColor({}, 'primary');
+  const finalColor = variant === 'link' ? linkColor : color;
 
   return (
     <Text
       style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
+        // Apply the typography style based on variant
+        variant in TextStyles ? TextStyles[variant] : TextStyles.bodyMedium,
+        // Apply the color
+        { color: finalColor as ColorValue },
+        // Apply any additional styles
         style,
       ]}
       {...rest}
@@ -33,28 +70,11 @@ export function ThemedText({
   );
 }
 
-const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
-  },
+// For backward compatibility with existing code
+export const styles = StyleSheet.create({
+  default: { ...TextStyles.bodyMedium },
+  defaultSemiBold: { ...TextStyles.labelLarge },
+  title: { ...TextStyles.displaySmall },
+  subtitle: { ...TextStyles.headingMedium },
+  link: { ...TextStyles.link },
 });
