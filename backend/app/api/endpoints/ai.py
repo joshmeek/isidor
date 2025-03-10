@@ -26,7 +26,8 @@ class ProtocolRecommendationRequest(BaseModel):
 
 class TrendAnalysisRequest(BaseModel):
     metric_type: str
-    time_period: str = "last_month"  # Options: "last_week", "last_month", "last_3_months", "last_6_months", "last_year"
+    time_period: str = "last_month"  # Options: "last_day", "last_week", "last_month", "last_3_months", "last_6_months", "last_year"
+    use_cache: bool = True
 
 
 @router.post("/insights/{user_id}", response_model=Dict[str, Any])
@@ -113,7 +114,13 @@ async def get_trend_analysis(
         raise HTTPException(status_code=403, detail="Not authorized to access trend analysis for other users")
 
     try:
-        result = await analyze_health_trends(db=db, user_id=user_id, metric_type=request.metric_type, time_period=request.time_period)
+        result = await analyze_health_trends(
+            db=db, 
+            user_id=user_id, 
+            metric_type=request.metric_type, 
+            time_period=request.time_period,
+            use_cache=request.use_cache
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to analyze health trends: {str(e)}")

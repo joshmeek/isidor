@@ -274,7 +274,13 @@ Key recommendation provided: {protocol_recommendation[:200]}...
     }
 
 
-async def analyze_health_trends(db: Session, user_id: UUID, metric_type: str, time_period: str = "last_month") -> Dict[str, Any]:
+async def analyze_health_trends(
+    db: Session, 
+    user_id: UUID, 
+    metric_type: str, 
+    time_period: str = "last_month",
+    use_cache: bool = True
+) -> Dict[str, Any]:
     """
     Analyze health trends for a specific metric using Gemini AI.
 
@@ -283,13 +289,33 @@ async def analyze_health_trends(db: Session, user_id: UUID, metric_type: str, ti
         user_id: User ID
         metric_type: Type of health metric to analyze
         time_period: Time period for analysis
+        use_cache: Whether to use cached responses
 
     Returns:
         Dictionary containing the trend analysis
     """
+    # Check cache first if enabled
+    if use_cache:
+        query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period)
+        cached_response = get_cached_response(
+            db=db,
+            user_id=user_id,
+            endpoint="trend_analysis",
+            time_frame=time_period,
+            query_hash=query_hash
+        )
+        
+        if cached_response:
+            print(f"Using cached trend analysis for user {user_id}, metric {metric_type}, time_period {time_period}")
+            return cached_response.response_data
+
     # Retrieve relevant context using RAG
     context = retrieve_context_for_user(
-        db=db, user_id=user_id, query=f"Analyze my {metric_type} trends for the {time_period}", metric_types=[metric_type]
+        db=db, 
+        user_id=user_id, 
+        query=f"Analyze my {metric_type} trends for the {time_period}", 
+        metric_types=[metric_type],
+        time_frame=time_period
     )
 
     # Check if we have any health metrics data for the requested type
@@ -310,7 +336,7 @@ async def analyze_health_trends(db: Session, user_id: UUID, metric_type: str, ti
 
 {memory_context}
 
-{"Provide a brief analysis of the trends in the user's " + metric_type + " data over the " + time_period + ". Limit your response to 3-5 sentences that highlight the most significant patterns or changes. Focus only on what's directly observable in the data." if has_health_data else "The user doesn't have any " + metric_type + " data for the " + time_period + ". In 1-2 sentences, acknowledge this and suggest what types of " + metric_type + " data would be helpful to collect."}
+{"Provide a brief analysis of the trends in the user's " + metric_type + " data over the " + time_period.replace('_', ' ') + ". Limit your response to 3-5 sentences that highlight the most significant patterns or changes. Focus only on what's directly observable in the data." if has_health_data else "The user doesn't have any " + metric_type + " data for the " + time_period.replace('_', ' ') + ". In 1-2 sentences, acknowledge this and suggest what types of " + metric_type + " data would be helpful to collect."}
 """
 
     # Generate response from Gemini
@@ -330,18 +356,41 @@ async def analyze_health_trends(db: Session, user_id: UUID, metric_type: str, ti
 
     # Update AI memory with this interaction
     memory_summary = f"""
-User requested: Analysis of {metric_type} trends for {time_period}
+User requested: Analysis of {metric_type} trends for {time_period.replace('_', ' ')}
 Data available: {"Yes" if has_health_data else "No"}
 Key analysis provided: {trend_analysis[:200]}...
 """
     create_or_update_ai_memory(db, user_id, memory_summary)
 
-    # Return the trend analysis
-    return {
+    # Prepare response data
+    response_data = {
         "trend_analysis": trend_analysis,
         "has_data": has_health_data,
-        "metadata": {"model": model_name, "metric_type": metric_type, "time_period": time_period, "has_memory": ai_memory is not None},
+        "metadata": {
+            "model": model_name, 
+            "metric_type": metric_type, 
+            "time_period": time_period, 
+            "has_memory": ai_memory is not None,
+            "cached": False
+        },
     }
+    
+    # Cache the response if enabled
+    if use_cache:
+        query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period)
+        create_cached_response(
+            db=db,
+            user_id=user_id,
+            endpoint="trend_analysis",
+            time_frame=time_period,
+            query_hash=query_hash,
+            response_data=response_data,
+            metric_types=[metric_type],
+            ttl_hours=24  # Cache for 24 hours
+        )
+
+    # Return the trend analysis
+    return response_data
 
 
 async def analyze_protocol_effectiveness(

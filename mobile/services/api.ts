@@ -449,6 +449,7 @@ export async function getUserProtocolProgress(userProtocolId: string): Promise<a
 export interface TrendAnalysisRequest {
   metric_type: string;
   time_period: string;
+  use_cache?: boolean;
 }
 
 export interface HealthInsightRequest {
@@ -476,8 +477,8 @@ export async function getHealthInsight(query: string, metric_types?: string[], t
   return authenticatedRequest<any>(`/api/v1/ai/insights/${userId}`, 'POST', requestData);
 }
 
-export async function getTrendAnalysis(metric_type: string, time_period: string = "last_week"): Promise<any> {
-  console.log(`Fetching trend analysis for metric: ${metric_type}, time period: ${time_period}`);
+export async function getTrendAnalysis(metric_type: string, time_period: string = "last_week", use_cache: boolean = true): Promise<any> {
+  console.log(`Fetching trend analysis for metric: ${metric_type}, time period: ${time_period}, use_cache: ${use_cache}`);
   const userId = await AsyncStorage.getItem(USER_ID_KEY);
   if (!userId) {
     console.error('User ID not found in AsyncStorage. Make sure you are logged in and have completed the authentication flow.');
@@ -494,7 +495,8 @@ export async function getTrendAnalysis(metric_type: string, time_period: string 
   
   const requestData: TrendAnalysisRequest = {
     metric_type,
-    time_period: apiTimePeriod
+    time_period: apiTimePeriod,
+    use_cache
   };
   
   return authenticatedRequest<any>(`/api/v1/ai/trends/${userId}`, 'POST', requestData);
