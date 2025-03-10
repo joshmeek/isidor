@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Dimensions, Text } from 'react-native';
+import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Dimensions, Text, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -294,6 +294,7 @@ export default function ProtocolsScreen() {
             colors={[primaryColor]} 
           />
         }
+        showsVerticalScrollIndicator={false}
       >
         <ThemedText variant="displaySmall" style={styles.title}>
           Protocols
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
   },
   tabContainer: {
     flexDirection: 'row',

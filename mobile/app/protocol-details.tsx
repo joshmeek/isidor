@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, View, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -57,7 +57,7 @@ export default function ProtocolDetailsScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: spacing.md,
-      paddingTop: spacing.lg,
+      paddingTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
       paddingBottom: spacing.sm,
     },
     backButton: {
@@ -471,9 +471,10 @@ export default function ProtocolDetailsScreen() {
         </ThemedText>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
         {/* Protocol Header */}
         <Card style={styles.protocolCard}>

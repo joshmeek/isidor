@@ -117,10 +117,7 @@ export default function LoginScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.contentWrapper}
         >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-          >
+          <View style={styles.scrollContainer}>
             <Animated.View 
               style={[
                 styles.content,
@@ -198,7 +195,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
             </Animated.View>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </LinearGradient>
     </View>
@@ -220,8 +217,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContainer: {
-    flexGrow: 1,
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     alignItems: 'center',

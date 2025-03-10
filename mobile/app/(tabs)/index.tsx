@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
@@ -558,12 +558,9 @@ export default function HomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            colors={[primaryColor as string]} 
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       >
         <ThemedText variant="displaySmall" style={styles.title}>
           Dashboard
@@ -596,7 +593,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
   },
   sectionTitle: {
     marginTop: spacing.xl,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Switch, Alert, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Switch, Alert, ScrollView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText, ThemedView, Button, Card } from '@/components/ui';
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
     },
     title: {
       marginBottom: spacing.md,
-      marginTop: spacing.lg,
+      marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
     },
     userInfoCard: {
       marginBottom: spacing.md,
@@ -198,6 +198,7 @@ export default function ProfileScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
         <ThemedText variant="displaySmall" style={styles.title}>
           Profile
