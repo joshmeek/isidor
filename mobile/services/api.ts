@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
+// Define UUID type for use in interfaces
+export type UUID = string;
+
 // API base URL - replace with your actual API URL when deploying
 // For iOS simulator, localhost works
 // For physical devices, you need to use your computer's IP address or a public URL
@@ -76,21 +79,39 @@ export class ApiError extends Error {
 
 // Helper function to handle API responses
 async function handleResponse<T>(response: Response): Promise<T> {
+  console.log(`Handling response with status: ${response.status}`);
+  
   if (!response.ok) {
     let errorMessage = 'An error occurred';
+    let errorData;
     
     try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+      const responseText = await response.text();
+      console.log(`Error response body: ${responseText}`);
+      
+      try {
+        errorData = JSON.parse(responseText);
+        errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (parseError) {
+        // If we can't parse JSON, use the response text
+        errorMessage = responseText || response.statusText || `Error ${response.status}`;
+      }
     } catch (e) {
-      // If we can't parse JSON, use the status text
+      // If we can't get the response text, use the status text
       errorMessage = response.statusText || `Error ${response.status}`;
     }
     
+    console.error(`API Error (${response.status}): ${errorMessage}`);
     throw new ApiError(errorMessage, response.status);
   }
   
-  return response.json() as Promise<T>;
+  try {
+    const data = await response.json() as T;
+    return data;
+  } catch (error) {
+    console.error('Error parsing response JSON:', error);
+    throw new ApiError('Invalid response format', 500);
+  }
 }
 
 // Helper function to check API connectivity
@@ -202,6 +223,8 @@ export async function refreshToken(): Promise<TokenResponse | null> {
   
   try {
     console.log('Attempting to refresh token');
+    console.log(`Using refresh token: ${refreshToken.substring(0, 10)}...`);
+    
     const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: {
@@ -210,8 +233,18 @@ export async function refreshToken(): Promise<TokenResponse | null> {
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
     
+    console.log(`Refresh token response status: ${response.status}`);
+    
     if (!response.ok) {
       console.log('Token refresh failed:', response.status);
+      // Try to get response body for more details
+      try {
+        const errorText = await response.text();
+        console.log('Refresh error response:', errorText);
+      } catch (e) {
+        console.log('Could not read error response');
+      }
+      
       // Clear invalid tokens
       await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
       await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -219,6 +252,11 @@ export async function refreshToken(): Promise<TokenResponse | null> {
     }
     
     const tokenData = await response.json() as TokenResponse;
+    console.log('Token refresh response:', JSON.stringify({
+      access_token: tokenData.access_token ? `${tokenData.access_token.substring(0, 10)}...` : 'missing',
+      refresh_token: tokenData.refresh_token ? `${tokenData.refresh_token.substring(0, 10)}...` : 'missing',
+      token_type: tokenData.token_type
+    }));
     
     // Store new tokens
     await AsyncStorage.setItem(ACCESS_TOKEN_KEY, tokenData.access_token);
@@ -262,12 +300,23 @@ export async function getCurrentUser(): Promise<User> {
 export async function authenticatedRequest<T>(
   endpoint: string,
   method: string = 'GET',
-  body?: any
+  body?: any,
+  forceRefresh: boolean = false
 ): Promise<T> {
   let accessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
   
+  // Force refresh token if requested
+  if (forceRefresh) {
+    console.log('Force refreshing token before request');
+    const refreshResult = await refreshToken();
+    if (!refreshResult) {
+      console.log('Force refresh failed');
+      throw new ApiError('Authentication failed', 401);
+    }
+    accessToken = refreshResult.access_token;
+  }
   // If no token, try to refresh
-  if (!accessToken) {
+  else if (!accessToken) {
     console.log('No access token, attempting refresh');
     const refreshResult = await refreshToken();
     if (!refreshResult) {
@@ -276,6 +325,8 @@ export async function authenticatedRequest<T>(
     }
     accessToken = refreshResult.access_token;
   }
+  
+  console.log(`Using access token: ${accessToken.substring(0, 10)}...`);
   
   const headers: HeadersInit = {
     'Authorization': `Bearer ${accessToken}`,
@@ -292,39 +343,59 @@ export async function authenticatedRequest<T>(
   }
   
   try {
-    console.log(`Making ${method} request to ${endpoint}`);
-    const response = await fetch(`${API_URL}${endpoint}`, options);
+    const url = `${API_URL}${endpoint}`;
+    console.log(`Making ${method} request to ${url}`);
+    console.log('Request headers:', JSON.stringify(headers));
     
-    // If unauthorized, try to refresh token and retry
+    const response = await fetch(url, options);
+    console.log(`Response status: ${response.status}`);
+    
+    // If unauthorized, try to refresh token and retry once
     if (response.status === 401) {
-      console.log('Received 401, attempting token refresh');
+      console.log('Received 401, attempting to refresh token and retry');
       const refreshResult = await refreshToken();
       if (!refreshResult) {
         console.log('Token refresh failed');
         throw new ApiError('Authentication failed', 401);
       }
       
-      // Retry with new token
-      console.log('Retrying request with new token');
-      headers.Authorization = `Bearer ${refreshResult.access_token}`;
-      const retryResponse = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers: {
-          ...headers,
-          'Authorization': `Bearer ${refreshResult.access_token}`
-        }
-      });
+      // Update headers with new token
+      const newToken = refreshResult.access_token;
+      console.log(`Using new access token: ${newToken.substring(0, 10)}...`);
+      headers.Authorization = `Bearer ${newToken}`;
+      options.headers = headers;
+      
+      // Retry the request
+      console.log(`Retrying ${method} request to ${url} with new token`);
+      const retryResponse = await fetch(url, options);
+      console.log(`Retry response status: ${retryResponse.status}`);
+      
+      // If still unauthorized after refresh, throw error
+      if (retryResponse.status === 401) {
+        console.log('Still unauthorized after token refresh');
+        throw new ApiError('Authentication failed after token refresh', 401);
+      }
       
       return handleResponse<T>(retryResponse);
     }
     
+    // Handle 500 errors with more details
+    if (response.status === 500) {
+      console.log('Received 500 Internal Server Error');
+      try {
+        const errorText = await response.text();
+        console.log('Error response body:', errorText);
+        throw new ApiError(`Server error: ${errorText}`, 500);
+      } catch (e) {
+        if (e instanceof ApiError) throw e;
+        throw new ApiError('Internal server error', 500);
+      }
+    }
+    
     return handleResponse<T>(response);
   } catch (error) {
-    console.error(`Request to ${endpoint} failed:`, error);
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(`Request failed: ${error}`, 500);
+    console.error(`Error in ${method} request to ${endpoint}:`, error);
+    throw error;
   }
 }
 
@@ -383,62 +454,181 @@ export async function createHealthMetric(metricData: HealthMetricInput): Promise
   return authenticatedRequest<any>('/api/v1/health-metrics/', 'POST', metricData);
 }
 
+// Protocol and UserProtocol interfaces
+export interface Protocol {
+  id: UUID;
+  name: string;
+  description?: string;
+  target_metrics: string[];
+  duration_type: string;
+  duration_days?: number;
+  steps?: string[];
+  recommendations?: string[];
+  expected_outcomes?: string[];
+  category?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserProtocol {
+  id: UUID;
+  user_id: UUID;
+  name: string;
+  description?: string;
+  start_date: string;
+  end_date?: string;
+  status: string;
+  template_id?: string;
+  target_metrics: string[];
+  custom_fields: Record<string, any>;
+  steps: string[];
+  recommendations: string[];
+  expected_outcomes: string[];
+  category?: string;
+  created_at: string;
+  updated_at: string;
+  protocol?: Protocol;
+}
+
+export interface UserProtocolWithProtocol extends UserProtocol {
+  protocol: Protocol;
+}
+
+export interface UserProtocolCreate {
+  protocol_id: string;
+  start_date?: string;
+}
+
+export interface UserProtocolProgress {
+  user_protocol_id: string;
+  protocol_id: string;
+  protocol_name: string;
+  status: string;
+  start_date: string;
+  end_date?: string;
+  days_elapsed: number;
+  days_remaining?: number;
+  completion_percentage?: number;
+  duration_type: string;
+  duration_days?: number;
+  target_metrics: string[];
+}
+
 // Protocol API functions
-export async function getProtocols(): Promise<any[]> {
+export async function getProtocols(): Promise<Protocol[]> {
   console.log('Fetching available protocols');
   try {
-    const protocols = await authenticatedRequest<any[]>('/api/v1/protocols/');
-    console.log(`Received ${protocols?.length || 0} available protocols`);
-    return protocols || [];
+    // Force refresh token before making the request
+    const protocols = await authenticatedRequest<Protocol[]>(
+      '/api/v1/protocols?skip=0&limit=100',
+      'GET',
+      undefined,
+      true // Force refresh token
+    );
+    
+    // Check if protocols is null or undefined
+    if (!protocols) {
+      console.log('Received null or undefined protocols');
+      return [];
+    }
+    
+    // Check if protocols is an array
+    if (!Array.isArray(protocols)) {
+      console.log('Received non-array protocols:', typeof protocols);
+      return [];
+    }
+    
+    console.log(`Received ${protocols.length} available protocols`);
+    return protocols;
   } catch (error) {
     console.error('Error fetching available protocols:', error);
-    return []; // Return empty array on error
+    // Check if it's an authentication error
+    if (error instanceof ApiError && error.status === 401) {
+      console.log('Authentication error when fetching protocols');
+    }
+    return [];
   }
 }
 
-export async function getUserProtocols(): Promise<any[]> {
+export async function getUserProtocols(): Promise<UserProtocolWithProtocol[]> {
   console.log('Fetching user protocols');
   try {
-    const protocols = await authenticatedRequest<any[]>('/api/v1/user-protocols/');
-    console.log(`Received ${protocols?.length || 0} user protocols`);
-    return protocols || [];
+    const protocols = await authenticatedRequest<UserProtocolWithProtocol[]>(
+      '/api/v1/user-protocols?skip=0&limit=100',
+      'GET',
+      undefined,
+      true // Force refresh token
+    );
+    
+    // Check if protocols is null or undefined
+    if (!protocols) {
+      console.log('Received null or undefined user protocols');
+      return [];
+    }
+    
+    // Check if protocols is an array
+    if (!Array.isArray(protocols)) {
+      console.log('Received non-array user protocols:', typeof protocols);
+      return [];
+    }
+    
+    console.log(`Received ${protocols.length} user protocols`);
+    return protocols;
   } catch (error) {
     console.error('Error fetching user protocols:', error);
-    return []; // Return empty array on error
+    return [];
   }
 }
 
-export async function getActiveProtocols(): Promise<any[]> {
+export async function getActiveProtocols(): Promise<UserProtocolWithProtocol[]> {
   try {
     console.log('Fetching active protocols');
-    const protocols = await authenticatedRequest<any[]>('/api/v1/user-protocols/active');
-    console.log(`Received ${protocols?.length || 0} active protocols`);
-    return protocols || [];
+    const protocols = await authenticatedRequest<UserProtocolWithProtocol[]>(
+      '/api/v1/user-protocols/active?skip=0&limit=100',
+      'GET',
+      undefined,
+      true // Force refresh token
+    );
+    
+    // Check if protocols is null or undefined
+    if (!protocols) {
+      console.log('Received null or undefined active protocols');
+      return [];
+    }
+    
+    // Check if protocols is an array
+    if (!Array.isArray(protocols)) {
+      console.log('Received non-array active protocols:', typeof protocols);
+      return [];
+    }
+    
+    console.log(`Received ${protocols.length} active protocols`);
+    return protocols;
   } catch (error) {
     console.error('Error fetching active protocols:', error);
-    return []; // Return empty array on error
+    return [];
   }
 }
 
-export async function enrollInProtocol(protocolId: string): Promise<any> {
+export async function enrollInProtocol(protocolId: string): Promise<UserProtocol> {
   console.log(`Enrolling in protocol: ${protocolId}`);
-  const enrollmentData = {
+  const enrollmentData: UserProtocolCreate = {
     protocol_id: protocolId
   };
-  return authenticatedRequest<any>('/api/v1/user-protocols/enroll', 'POST', enrollmentData);
+  return authenticatedRequest<UserProtocol>('/api/v1/user-protocols/enroll', 'POST', enrollmentData);
 }
 
-export async function getProtocolDetails(protocolId: string): Promise<any> {
+export async function getProtocolDetails(protocolId: string): Promise<Protocol> {
   console.log(`Fetching details for protocol: ${protocolId}`);
-  return authenticatedRequest<any>(`/api/v1/protocols/${protocolId}`);
+  return authenticatedRequest<Protocol>(`/api/v1/protocols/${protocolId}`);
 }
 
-export async function getUserProtocolDetails(userProtocolId: string): Promise<any> {
+export async function getUserProtocolDetails(userProtocolId: string): Promise<UserProtocolWithProtocol> {
   console.log(`Fetching details for user protocol: ${userProtocolId}`);
   try {
     const endpoint = `/api/v1/user-protocols/${userProtocolId}`;
     console.log(`Making request to: ${endpoint}`);
-    const result = await authenticatedRequest<any>(endpoint);
+    const result = await authenticatedRequest<UserProtocolWithProtocol>(endpoint);
     console.log(`Received user protocol details:`, JSON.stringify(result, null, 2));
     return result;
   } catch (error) {
@@ -447,14 +637,14 @@ export async function getUserProtocolDetails(userProtocolId: string): Promise<an
   }
 }
 
-export async function getProtocolEffectiveness(protocolId: string): Promise<any> {
-  console.log(`Fetching effectiveness for protocol: ${protocolId}`);
-  return authenticatedRequest<any>(`/api/v1/protocols/${protocolId}/effectiveness-metrics`);
+export async function getUserProtocolProgress(userProtocolId: string): Promise<UserProtocolProgress> {
+  console.log(`Fetching progress for user protocol: ${userProtocolId}`);
+  return authenticatedRequest<UserProtocolProgress>(`/api/v1/user-protocols/${userProtocolId}/progress`);
 }
 
-export async function getUserProtocolProgress(userProtocolId: string): Promise<any> {
-  console.log(`Fetching progress for user protocol: ${userProtocolId}`);
-  return authenticatedRequest<any>(`/api/v1/user-protocols/${userProtocolId}/progress`);
+export async function getProtocolEffectiveness(userProtocolId: string): Promise<any> {
+  console.log(`Fetching effectiveness for user protocol: ${userProtocolId}`);
+  return authenticatedRequest<any>(`/api/v1/user-protocols/${userProtocolId}/effectiveness`);
 }
 
 export interface TrendAnalysisRequest {

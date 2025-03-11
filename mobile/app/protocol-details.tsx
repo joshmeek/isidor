@@ -8,27 +8,43 @@ import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
 import { spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { UUID, Protocol, UserProtocolWithProtocol } from '@/services/api';
 
-// Types for protocols
-interface Protocol {
-  id: string;
-  name: string;
-  description: string;
-  target_metrics: string[];
-  duration_type: string;
-  duration_days: number;
-}
+// Add the missing calculation functions
+const calculateProgress = (userProtocol: UserProtocolWithProtocol) => {
+  if (!userProtocol || !userProtocol.protocol) {
+    return 0;
+  }
+  
+  const startDate = new Date(userProtocol.start_date);
+  const today = new Date();
+  const totalDays = userProtocol.protocol.duration_days || 30; // Default to 30 if not specified
+  
+  const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.min(1, Math.max(0, daysPassed / totalDays));
+};
 
-// Types for user protocols
-interface UserProtocol {
-  id: string;
-  user_id: string;
-  protocol_id: string;
-  start_date: string;
-  end_date?: string;
-  status: string;
-  protocol?: Protocol;
-}
+const calculateDaysPassed = (userProtocol: UserProtocolWithProtocol) => {
+  if (!userProtocol) return 0;
+  
+  const startDate = new Date(userProtocol.start_date);
+  const today = new Date();
+  
+  return Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const calculateDaysLeft = (userProtocol: UserProtocolWithProtocol) => {
+  if (!userProtocol || !userProtocol.protocol) {
+    return 0;
+  }
+  
+  const startDate = new Date(userProtocol.start_date);
+  const today = new Date();
+  const totalDays = userProtocol.protocol.duration_days || 30; // Default to 30 if not specified
+  
+  const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, totalDays - daysPassed);
+};
 
 export default function ProtocolDetailsScreen() {
   console.log('Rendering ProtocolDetailsScreen');
@@ -37,7 +53,7 @@ export default function ProtocolDetailsScreen() {
   
   console.log('Protocol ID from params:', id);
   
-  const [userProtocol, setUserProtocol] = useState<UserProtocol | null>(null);
+  const [userProtocol, setUserProtocol] = useState<UserProtocolWithProtocol | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -327,42 +343,6 @@ export default function ProtocolDetailsScreen() {
     router.back();
   };
 
-  // Add the missing calculation functions
-  const calculateProgress = () => {
-    if (!userProtocol || !userProtocol.protocol || userProtocol.protocol.duration_type !== 'fixed') {
-      return 0;
-    }
-    
-    const startDate = new Date(userProtocol.start_date);
-    const today = new Date();
-    const totalDays = userProtocol.protocol.duration_days;
-    
-    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.min(1, Math.max(0, daysPassed / totalDays));
-  };
-
-  const calculateDaysPassed = () => {
-    if (!userProtocol) return 0;
-    
-    const startDate = new Date(userProtocol.start_date);
-    const today = new Date();
-    
-    return Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  const calculateDaysLeft = () => {
-    if (!userProtocol || !userProtocol.protocol || userProtocol.protocol.duration_type !== 'fixed') {
-      return 0;
-    }
-    
-    const startDate = new Date(userProtocol.start_date);
-    const today = new Date();
-    const totalDays = userProtocol.protocol.duration_days;
-    
-    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, totalDays - daysPassed);
-  };
-
   // Get status color based on protocol status
   const getStatusColor = () => {
     if (!userProtocol) return primaryColor;
@@ -492,18 +472,18 @@ export default function ProtocolDetailsScreen() {
             {userProtocol.protocol?.description || 'No description available'}
           </ThemedText>
           
-          {userProtocol.protocol?.duration_type === 'fixed' && (
+          {userProtocol.protocol?.duration_days && (
             <View style={styles.progressContainer}>
               <View style={styles.progressBackground}>
                 <View 
                   style={[
                     styles.progressBar, 
-                    { width: `${calculateProgress() * 100}%` }
+                    { width: `${calculateProgress(userProtocol) * 100}%` }
                   ]} 
                 />
               </View>
               <ThemedText variant="bodySmall" style={styles.progressText}>
-                {calculateDaysPassed()} days completed / {calculateDaysLeft()} days left
+                {calculateDaysPassed(userProtocol)} days completed / {calculateDaysLeft(userProtocol)} days left
               </ThemedText>
             </View>
           )}
@@ -522,19 +502,19 @@ export default function ProtocolDetailsScreen() {
                   <View 
                     style={[
                       styles.progressFill, 
-                      { width: `${calculateProgress() * 100}%` }
+                      { width: `${calculateProgress(userProtocol) * 100}%` }
                     ]} 
                   />
                 </View>
                 <ThemedText variant="bodySmall" style={styles.progressText}>
-                  {Math.round(calculateProgress() * 100)}% Complete
+                  {Math.round(calculateProgress(userProtocol) * 100)}% Complete
                 </ThemedText>
               </View>
               
               <View style={styles.daysContainer}>
                 <View style={styles.dayInfo}>
                   <ThemedText variant="headingSmall" style={styles.dayNumber}>
-                    {calculateDaysPassed()}
+                    {calculateDaysPassed(userProtocol)}
                   </ThemedText>
                   <ThemedText variant="caption" secondary>
                     Days Passed
@@ -543,7 +523,7 @@ export default function ProtocolDetailsScreen() {
                 
                 <View style={styles.dayInfo}>
                   <ThemedText variant="headingSmall" style={styles.dayNumber}>
-                    {calculateDaysLeft()}
+                    {calculateDaysLeft(userProtocol)}
                   </ThemedText>
                   <ThemedText variant="caption" secondary>
                     Days Left

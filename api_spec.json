@@ -58,7 +58,7 @@
                 "example": {
                   "detail": {
                     "errors": [
-                      "Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood"
+                      "Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood, calories, event"
                     ]
                   }
                 }
@@ -297,7 +297,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/components/schemas/MetricType"
                 },
                 {
                   "type": "null"
@@ -399,7 +399,7 @@
           "Health Metrics"
         ],
         "summary": "Search Similar Metrics",
-        "description": "Search for health metrics similar to the query using vector similarity.\n\nThis endpoint uses semantic search to find health metrics that are conceptually similar to the\nprovided query. The query is converted to a vector embedding and compared to the embeddings of\nstored health metrics using cosine similarity.\n\n- **query**: Text query to search for (e.g., \"deep sleep\", \"high activity\")\n- **metric_type**: Optional filter by metric type\n- **limit**: Maximum number of results to return\n- **min_similarity**: Minimum similarity threshold (0-1)\n\nOnly authenticated users can search health metrics, and they can only search their own metrics.",
+        "description": "Search for health metrics similar to a query.\n\nThis endpoint uses vector similarity search to find health metrics that are semantically similar\nto the provided query. The search can be filtered by metric type and similarity threshold.\n\nOnly authenticated users can search for health metrics, and they can only search their own metrics.",
         "operationId": "search_similar_metrics_api_v1_health_metrics_search_similarity_post",
         "security": [
           {
@@ -458,7 +458,7 @@
           "Health Metrics"
         ],
         "summary": "Get Metrics Stats",
-        "description": "Get statistics for a specific health metric type over a time period.\n\nThis endpoint calculates various statistics for a specific health metric type, such as average,\nminimum, and maximum values. The statistics are calculated based on the metrics within the\nspecified date range.\n\nThe response structure varies based on the metric type:\n- **sleep**: Sleep duration and sleep score statistics\n- **activity**: Steps, active calories, and active minutes statistics\n- **heart_rate**: Average BPM and resting BPM statistics\n- **weight**: Weight value statistics\n- **blood_pressure**: Systolic and diastolic pressure statistics\n- **mood**: Mood rating statistics\n\nOnly authenticated users can access health metrics statistics, and they can only access their own statistics.",
+        "description": "Get statistics for a specific health metric type.\n\nCalculates statistics for a specific health metric type, such as average, min, and max values\nfor each field. The statistics can be filtered by date range.\n\nOnly authenticated users can access health metrics statistics, and they can only access their own metrics.",
         "operationId": "get_metrics_stats_api_v1_health_metrics_stats__user_id___metric_type__get",
         "security": [
           {
@@ -481,8 +481,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Metric Type"
+              "$ref": "#/components/schemas/MetricType"
             }
           },
           {
@@ -1222,14 +1221,14 @@
         ]
       }
     },
-    "/api/v1/protocols/": {
+    "/api/v1/protocols/templates": {
       "get": {
         "tags": [
           "Protocols"
         ],
-        "summary": "Read Protocols",
-        "description": "Retrieve protocols.",
-        "operationId": "read_protocols_api_v1_protocols__get",
+        "summary": "List Protocol Templates",
+        "description": "List available protocol templates.\n\nOptionally filter by category.",
+        "operationId": "list_protocol_templates_api_v1_protocols_templates_get",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1237,27 +1236,7 @@
         ],
         "parameters": [
           {
-            "name": "skip",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 0,
-              "title": "Skip"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "target_metric",
+            "name": "category",
             "in": "query",
             "required": false,
             "schema": {
@@ -1269,8 +1248,10 @@
                   "type": "null"
                 }
               ],
-              "title": "Target Metric"
-            }
+              "description": "Filter templates by category",
+              "title": "Category"
+            },
+            "description": "Filter templates by category"
           }
         ],
         "responses": {
@@ -1281,9 +1262,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Protocol"
+                    "$ref": "#/components/schemas/ProtocolTemplateResponse"
                   },
-                  "title": "Response Read Protocols Api V1 Protocols  Get"
+                  "title": "Response List Protocol Templates Api V1 Protocols Templates Get"
                 }
               }
             }
@@ -1302,14 +1283,67 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/protocols/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "Get Template Details",
+        "description": "Get detailed information about a specific protocol template.",
+        "operationId": "get_template_details_api_v1_protocols_templates__template_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolTemplateDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols": {
       "post": {
         "tags": [
           "Protocols"
         ],
-        "summary": "Create Protocol Endpoint",
-        "description": "Create new protocol.",
-        "operationId": "create_protocol_endpoint_api_v1_protocols__post",
+        "summary": "Create Protocol",
+        "description": "Create a new protocol for the current user.\n\nCan be created from a template or as a custom protocol.",
+        "operationId": "create_protocol_api_v1_protocols_post",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1331,7 +1365,93 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Protocol"
+                  "$ref": "#/components/schemas/ProtocolResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Protocol not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Protocols"
+        ],
+        "summary": "List Protocols",
+        "description": "List all protocols.\n\nOptionally filter by status.",
+        "operationId": "list_protocols_api_v1_protocols_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (active, completed, paused)",
+              "title": "Status"
+            },
+            "description": "Filter by status (active, completed, paused)"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Number of records to skip",
+              "default": 0,
+              "title": "Skip"
+            },
+            "description": "Number of records to skip"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Maximum number of records to return",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "Maximum number of records to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProtocolResponse"
+                  },
+                  "title": "Response List Protocols Api V1 Protocols Get"
                 }
               }
             }
@@ -1357,9 +1477,9 @@
         "tags": [
           "Protocols"
         ],
-        "summary": "Read Protocol",
-        "description": "Get protocol by ID.",
-        "operationId": "read_protocol_api_v1_protocols__protocol_id__get",
+        "summary": "Get Protocol",
+        "description": "Get a specific protocol by ID.",
+        "operationId": "get_protocol_api_v1_protocols__protocol_id__get",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1372,7 +1492,6 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
               "title": "Protocol Id"
             }
           }
@@ -1383,7 +1502,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Protocol"
+                  "$ref": "#/components/schemas/ProtocolResponse"
                 }
               }
             }
@@ -1407,9 +1526,9 @@
         "tags": [
           "Protocols"
         ],
-        "summary": "Update Protocol Endpoint",
-        "description": "Update a protocol.",
-        "operationId": "update_protocol_endpoint_api_v1_protocols__protocol_id__put",
+        "summary": "Update Protocol",
+        "description": "Update a specific protocol.",
+        "operationId": "update_protocol_api_v1_protocols__protocol_id__put",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1422,7 +1541,6 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
               "title": "Protocol Id"
             }
           }
@@ -1443,7 +1561,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Protocol"
+                  "$ref": "#/components/schemas/ProtocolResponse"
                 }
               }
             }
@@ -1467,9 +1585,9 @@
         "tags": [
           "Protocols"
         ],
-        "summary": "Delete Protocol Endpoint",
-        "description": "Delete a protocol.",
-        "operationId": "delete_protocol_endpoint_api_v1_protocols__protocol_id__delete",
+        "summary": "Delete Protocol",
+        "description": "Delete a specific protocol.",
+        "operationId": "delete_protocol_api_v1_protocols__protocol_id__delete",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1482,22 +1600,13 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
               "title": "Protocol Id"
             }
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "title": "Response Delete Protocol Endpoint Api V1 Protocols  Protocol Id  Delete"
-                }
-              }
-            }
+          "204": {
+            "description": "Successful Response"
           },
           "404": {
             "description": "Protocol not found"
@@ -1515,98 +1624,14 @@
         }
       }
     },
-    "/api/v1/protocols/templates/list": {
-      "get": {
-        "tags": [
-          "Protocols"
-        ],
-        "summary": "Read Protocol Templates",
-        "description": "Retrieve available protocol templates.",
-        "operationId": "read_protocol_templates_api_v1_protocols_templates_list_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ProtocolTemplate"
-                  },
-                  "type": "array",
-                  "title": "Response Read Protocol Templates Api V1 Protocols Templates List Get"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Protocol not found"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/protocols/templates/create": {
+    "/api/v1/protocols/{protocol_id}/check-ins": {
       "post": {
         "tags": [
           "Protocols"
         ],
-        "summary": "Create From Template",
-        "description": "Create a protocol from a template.",
-        "operationId": "create_from_template_api_v1_protocols_templates_create_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProtocolTemplateCustomization"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Protocol"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Protocol not found"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/protocols/templates/{template_id}/details": {
-      "get": {
-        "tags": [
-          "Protocols"
-        ],
-        "summary": "Get Template Details",
-        "description": "Get detailed information about a protocol template.",
-        "operationId": "get_template_details_api_v1_protocols_templates__template_id__details_get",
+        "summary": "Create Check In",
+        "description": "Create a check-in for a specific protocol.",
+        "operationId": "create_check_in_api_v1_protocols__protocol_id__check_ins_post",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1614,23 +1639,32 @@
         ],
         "parameters": [
           {
-            "name": "template_id",
+            "name": "protocol_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Template Id"
+              "title": "Protocol Id"
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInCreate"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "title": "Response Get Template Details Api V1 Protocols Templates  Template Id  Details Get"
+                  "$ref": "#/components/schemas/CheckInResponse"
                 }
               }
             }
@@ -1649,16 +1683,14 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/protocols/{protocol_id}/effectiveness-metrics": {
+      },
       "get": {
         "tags": [
           "Protocols"
         ],
-        "summary": "Get Effectiveness Metrics",
-        "description": "Get effectiveness metrics for a protocol.",
-        "operationId": "get_effectiveness_metrics_api_v1_protocols__protocol_id__effectiveness_metrics_get",
+        "summary": "List Check Ins",
+        "description": "List check-ins for a specific protocol.",
+        "operationId": "list_check_ins_api_v1_protocols__protocol_id__check_ins_get",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -1671,7 +1703,6 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
               "title": "Protocol Id"
             }
           }
@@ -1682,8 +1713,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "title": "Response Get Effectiveness Metrics Api V1 Protocols  Protocol Id  Effectiveness Metrics Get"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CheckInResponse"
+                  },
+                  "title": "Response List Check Ins Api V1 Protocols  Protocol Id  Check Ins Get"
                 }
               }
             }
@@ -2492,6 +2526,98 @@
         "title": "ChangePassword",
         "description": "Change password schema."
       },
+      "CheckInCreate": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "metrics": {
+            "type": "object",
+            "title": "Metrics"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "completed"
+          }
+        },
+        "type": "object",
+        "title": "CheckInCreate",
+        "description": "Schema for creating a protocol check-in"
+      },
+      "CheckInResponse": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "metrics": {
+            "type": "object",
+            "title": "Metrics"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "completed"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "protocol_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protocol Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "protocol_id"
+        ],
+        "title": "CheckInResponse",
+        "description": "Schema for protocol check-in response"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2529,6 +2655,11 @@
             "type": "boolean",
             "title": "Update Memory",
             "default": true
+          },
+          "time_frame": {
+            "type": "string",
+            "title": "Time Frame",
+            "default": "last_day"
           }
         },
         "type": "object",
@@ -2545,8 +2676,7 @@
             "title": "Date"
           },
           "metric_type": {
-            "type": "string",
-            "title": "Metric Type"
+            "$ref": "#/components/schemas/MetricType"
           },
           "value": {
             "type": "object",
@@ -2600,8 +2730,7 @@
             "title": "Date"
           },
           "metric_type": {
-            "type": "string",
-            "title": "Metric Type"
+            "$ref": "#/components/schemas/MetricType"
           },
           "value": {
             "type": "object",
@@ -2636,13 +2765,12 @@
           "metric_type": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/MetricType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Metric Type"
+            ]
           },
           "limit": {
             "type": "integer",
@@ -2670,13 +2798,12 @@
           "metric_type": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/MetricType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Metric Type"
+            ]
           },
           "value": {
             "anyOf": [
@@ -2703,6 +2830,20 @@
         },
         "type": "object",
         "title": "HealthMetricUpdate"
+      },
+      "MetricType": {
+        "type": "string",
+        "enum": [
+          "sleep",
+          "activity",
+          "heart_rate",
+          "blood_pressure",
+          "weight",
+          "mood",
+          "calories",
+          "event"
+        ],
+        "title": "MetricType"
       },
       "PasswordReset": {
         "properties": {
@@ -2739,6 +2880,11 @@
       },
       "Protocol": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -2775,19 +2921,14 @@
               }
             ],
             "title": "Duration Days"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
           }
         },
         "type": "object",
         "required": [
+          "id",
           "name",
           "target_metrics",
-          "duration_type",
-          "id"
+          "duration_type"
         ],
         "title": "Protocol",
         "description": "Protocol schema for response."
@@ -2795,7 +2936,14 @@
       "ProtocolCreate": {
         "properties": {
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
           },
           "description": {
@@ -2809,16 +2957,29 @@
             ],
             "title": "Description"
           },
-          "target_metrics": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Target Metrics"
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
           },
-          "duration_type": {
-            "type": "string",
-            "title": "Duration Type"
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
           },
           "duration_days": {
             "anyOf": [
@@ -2830,16 +2991,100 @@
               }
             ],
             "title": "Duration Days"
+          },
+          "target_metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Metrics"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "recommendations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendations"
+          },
+          "expected_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Outcomes"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
           }
         },
         "type": "object",
-        "required": [
-          "name",
-          "target_metrics",
-          "duration_type"
-        ],
         "title": "ProtocolCreate",
-        "description": "Protocol creation schema."
+        "description": "Schema for creating a protocol"
       },
       "ProtocolRecommendationRequest": {
         "properties": {
@@ -2862,11 +3107,195 @@
         ],
         "title": "ProtocolRecommendationRequest"
       },
-      "ProtocolTemplate": {
+      "ProtocolResponse": {
         "properties": {
-          "template_id": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "target_metrics": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Metrics"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "recommendations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendations"
+          },
+          "expected_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Outcomes"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "id": {
             "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Template Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProtocolResponse",
+        "description": "Schema for protocol response"
+      },
+      "ProtocolTemplateDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
           "name": {
             "type": "string",
@@ -2875,6 +3304,87 @@
           "description": {
             "type": "string",
             "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "target_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Metrics"
+          },
+          "duration_type": {
+            "type": "string",
+            "title": "Duration Type"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "recommendations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          },
+          "expected_outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Expected Outcomes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "category",
+          "target_metrics",
+          "duration_type",
+          "steps",
+          "recommendations",
+          "expected_outcomes"
+        ],
+        "title": "ProtocolTemplateDetailResponse",
+        "description": "Schema for detailed protocol template response"
+      },
+      "ProtocolTemplateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
           },
           "target_metrics": {
             "items": {
@@ -2901,86 +3411,15 @@
         },
         "type": "object",
         "required": [
-          "template_id",
+          "id",
           "name",
           "description",
+          "category",
           "target_metrics",
           "duration_type"
         ],
-        "title": "ProtocolTemplate",
-        "description": "Protocol template schema."
-      },
-      "ProtocolTemplateCustomization": {
-        "properties": {
-          "template_id": {
-            "type": "string",
-            "title": "Template Id"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "target_metrics": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Target Metrics"
-          },
-          "duration_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Type"
-          },
-          "duration_days": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Days"
-          }
-        },
-        "type": "object",
-        "required": [
-          "template_id"
-        ],
-        "title": "ProtocolTemplateCustomization",
-        "description": "Protocol template customization schema."
+        "title": "ProtocolTemplateResponse",
+        "description": "Schema for protocol template response"
       },
       "ProtocolUpdate": {
         "properties": {
@@ -3006,6 +3445,41 @@
             ],
             "title": "Description"
           },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
           "target_metrics": {
             "anyOf": [
               {
@@ -3020,7 +3494,60 @@
             ],
             "title": "Target Metrics"
           },
-          "duration_type": {
+          "custom_fields": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "recommendations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendations"
+          },
+          "expected_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Outcomes"
+          },
+          "category": {
             "anyOf": [
               {
                 "type": "string"
@@ -3029,23 +3556,23 @@
                 "type": "null"
               }
             ],
-            "title": "Duration Type"
+            "title": "Category"
           },
-          "duration_days": {
+          "status": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Duration Days"
+            "title": "Status"
           }
         },
         "type": "object",
         "title": "ProtocolUpdate",
-        "description": "Protocol update schema."
+        "description": "Schema for updating a protocol"
       },
       "RefreshToken": {
         "properties": {
@@ -3095,6 +3622,11 @@
             "type": "string",
             "title": "Time Period",
             "default": "last_month"
+          },
+          "use_cache": {
+            "type": "boolean",
+            "title": "Use Cache",
+            "default": true
           }
         },
         "type": "object",

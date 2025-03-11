@@ -11,15 +11,35 @@ def get_protocol(db: Session, protocol_id: UUID) -> Optional[Protocol]:
     return db.query(Protocol).filter(Protocol.id == protocol_id).first()
 
 
-def get_protocols(db: Session, skip: int = 0, limit: int = 100, target_metric: Optional[str] = None) -> List[Protocol]:
-    """Get all protocols with optional filtering by target metric."""
+def get_protocols(db: Session, skip: int = 0, limit: int = 100, target_metric: Optional[str] = None, status: Optional[str] = None) -> List[Protocol]:
+    """
+    Get all protocols with optional filtering.
+    
+    Args:
+        db: Database session
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        target_metric: Filter by target metric
+        status: Filter by status
+        
+    Returns:
+        List of Protocol objects
+    """
     query = db.query(Protocol)
 
     if target_metric:
         # Filter protocols that target the specified metric
         query = query.filter(Protocol.target_metrics.any(target_metric))
 
-    return query.offset(skip).limit(limit).all()
+    if status:
+        # Filter protocols by status
+        query = query.filter(Protocol.status == status)
+
+    # Apply pagination
+    query = query.order_by(Protocol.created_at.desc())
+    query = query.offset(skip).limit(limit)
+    
+    return query.all()
 
 
 def create_protocol(db: Session, protocol_in: ProtocolCreate) -> Protocol:
@@ -60,89 +80,92 @@ def delete_protocol(db: Session, protocol_id: UUID) -> None:
 
 
 def get_protocol_templates(db: Session) -> List[Dict[str, Any]]:
-    """Get predefined protocol templates."""
-    # Define protocol templates
+    """
+    Get a list of available protocol templates.
+    
+    These are predefined protocols that users can enroll in.
+    """
     templates = [
         {
+            "id": "intermittent-fasting-16-8",
+            "name": "Intermittent Fasting (16:8)",
+            "description": "Fast for 16 hours each day, eating only during an 8-hour window. This protocol helps with weight management, metabolic health, and may improve insulin sensitivity.",
+            "target_metrics": ["weight", "calories", "heart_rate"],
+            "duration_type": "ongoing",
+            "duration_days": None,
+            "customizable_fields": ["start_date"],
+            "category": "nutrition"
+        },
+        {
+            "id": "sleep-optimization",
             "name": "Sleep Optimization Protocol",
-            "description": "A protocol designed to improve sleep quality and consistency.",
+            "description": "Improve sleep quality through consistent sleep schedule, evening routine, and sleep environment optimization. Track sleep metrics to measure improvements.",
             "target_metrics": ["sleep"],
             "duration_type": "fixed",
-            "duration_days": 28,
-            "template_id": "sleep_optimization",
+            "duration_days": 30,
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "sleep"
         },
         {
-            "name": "Activity Building Protocol",
-            "description": "A protocol designed to gradually increase activity levels while maintaining recovery.",
-            "target_metrics": ["activity", "heart_rate"],
+            "id": "daily-10k-steps",
+            "name": "Daily 10,000 Steps Challenge",
+            "description": "Commit to walking 10,000 steps every day to improve cardiovascular health, manage weight, and boost energy levels.",
+            "target_metrics": ["activity"],
             "duration_type": "fixed",
             "duration_days": 30,
-            "template_id": "activity_building",
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "fitness"
         },
         {
-            "name": "Recovery Protocol",
-            "description": "A protocol designed to optimize recovery after intense activity periods.",
-            "target_metrics": ["sleep", "activity", "heart_rate"],
+            "id": "meditation-practice",
+            "name": "Daily Meditation Practice",
+            "description": "Establish a daily meditation practice to reduce stress, improve focus, and enhance overall well-being. Track mood and heart rate to observe benefits.",
+            "target_metrics": ["mood", "heart_rate"],
+            "duration_type": "fixed",
+            "duration_days": 21,
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "mental-health"
+        },
+        {
+            "id": "low-carb-diet",
+            "name": "Low-Carb Nutrition Plan",
+            "description": "Follow a low-carbohydrate diet to manage weight, blood sugar levels, and improve metabolic health. Track calories, weight, and energy levels.",
+            "target_metrics": ["calories", "weight", "event"],
+            "duration_type": "fixed",
+            "duration_days": 30,
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "nutrition"
+        },
+        {
+            "id": "hydration-challenge",
+            "name": "Optimal Hydration Challenge",
+            "description": "Drink adequate water daily to improve energy, skin health, and overall well-being. Track water intake and observe effects on other health metrics.",
+            "target_metrics": ["event", "mood"],
             "duration_type": "fixed",
             "duration_days": 14,
-            "template_id": "recovery",
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "nutrition"
         },
         {
-            "name": "Heart Rate Variability Improvement Protocol",
-            "description": "A protocol designed to improve heart rate variability through targeted interventions.",
-            "target_metrics": ["heart_rate", "sleep", "activity"],
-            "duration_type": "fixed",
-            "duration_days": 21,
-            "template_id": "hrv_improvement",
-        },
-        {
-            "name": "Stress Reduction Protocol",
-            "description": "A protocol designed to reduce stress levels and improve overall well-being.",
-            "target_metrics": ["heart_rate", "sleep", "mood"],
-            "duration_type": "fixed",
-            "duration_days": 28,
-            "template_id": "stress_reduction",
-        },
-        {
-            "name": "Mood Enhancement Protocol",
-            "description": "A protocol designed to improve mood and emotional well-being.",
-            "target_metrics": ["mood", "sleep", "activity"],
-            "duration_type": "fixed",
-            "duration_days": 30,
-            "template_id": "mood_enhancement",
-        },
-        {
-            "name": "Blood Pressure Management Protocol",
-            "description": "A protocol designed to help manage and optimize blood pressure levels.",
-            "target_metrics": ["blood_pressure", "heart_rate", "activity"],
-            "duration_type": "fixed",
-            "duration_days": 42,
-            "template_id": "blood_pressure_management",
-        },
-        {
-            "name": "Weight Management Protocol",
-            "description": "A protocol designed to support healthy weight management goals.",
-            "target_metrics": ["weight", "activity", "sleep"],
+            "id": "strength-training",
+            "name": "Progressive Strength Training",
+            "description": "Follow a progressive strength training program to build muscle, increase metabolism, and improve overall fitness.",
+            "target_metrics": ["activity", "weight"],
             "duration_type": "fixed",
             "duration_days": 60,
-            "template_id": "weight_management",
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "fitness"
         },
         {
-            "name": "Circadian Rhythm Optimization Protocol",
-            "description": "A protocol designed to align and optimize your circadian rhythm for better health.",
-            "target_metrics": ["sleep", "activity", "heart_rate"],
-            "duration_type": "fixed",
-            "duration_days": 21,
-            "template_id": "circadian_optimization",
-        },
-        {
-            "name": "Energy Enhancement Protocol",
-            "description": "A protocol designed to improve energy levels throughout the day.",
-            "target_metrics": ["activity", "sleep", "mood"],
+            "id": "stress-reduction",
+            "name": "Stress Reduction Protocol",
+            "description": "Implement daily stress reduction techniques to improve mental health, sleep quality, and reduce physiological stress markers.",
+            "target_metrics": ["mood", "sleep", "heart_rate"],
             "duration_type": "fixed",
             "duration_days": 28,
-            "template_id": "energy_enhancement",
-        },
+            "customizable_fields": ["start_date", "duration_days"],
+            "category": "mental-health"
+        }
     ]
 
     return templates
@@ -174,181 +197,265 @@ def create_protocol_from_template(db: Session, template_id: str, customizations:
 
 def get_protocol_template_details(template_id: str) -> Dict[str, Any]:
     """
-    Get detailed information about a protocol template.
+    Get detailed information about a specific protocol template.
 
     Args:
-        template_id: ID of the template
+        template_id: The ID of the template to retrieve
 
     Returns:
-        Dictionary with detailed protocol information
+        Dict containing detailed template information
     """
-    # Define detailed protocol information
-    protocol_details = {
-        "sleep_optimization": {
-            "overview": "The Sleep Optimization Protocol is designed to improve sleep quality, duration, and consistency over a 4-week period.",
-            "goals": ["Increase deep sleep duration", "Improve sleep consistency", "Reduce sleep latency", "Enhance overall sleep quality"],
-            "metrics_tracked": [
-                {"name": "Sleep Duration", "description": "Total time spent asleep each night", "target": "7-9 hours"},
-                {"name": "Deep Sleep", "description": "Time spent in deep sleep stages", "target": "Increase by 10-15%"},
-                {"name": "Sleep Consistency", "description": "Variation in sleep and wake times", "target": "< 30 min variation"},
-                {"name": "Sleep Latency", "description": "Time to fall asleep", "target": "< 15 minutes"},
+    # Define detailed template information
+    template_details = {
+        "intermittent-fasting-16-8": {
+            "name": "Intermittent Fasting (16:8)",
+            "description": "Fast for 16 hours each day, eating only during an 8-hour window. This protocol helps with weight management, metabolic health, and may improve insulin sensitivity.",
+            "target_metrics": ["weight", "calories", "heart_rate"],
+            "duration_type": "ongoing",
+            "duration_days": None,
+            "steps": [
+                "Choose an 8-hour eating window that works for your schedule (e.g., 12pm-8pm)",
+                "Consume all daily calories within this window",
+                "During fasting hours, drink water, black coffee, or unsweetened tea",
+                "Track your weight regularly to monitor progress",
+                "Log your meals and caloric intake during eating windows",
+                "Monitor how you feel throughout the day"
             ],
-            "phases": [
-                {
-                    "name": "Assessment Phase",
-                    "duration": "7 days",
-                    "description": "Establish baseline sleep patterns and identify areas for improvement.",
-                },
-                {
-                    "name": "Intervention Phase",
-                    "duration": "14 days",
-                    "description": "Implement targeted sleep hygiene practices and environmental optimizations.",
-                },
-                {"name": "Maintenance Phase", "duration": "7 days", "description": "Solidify new sleep habits and assess improvements."},
+            "recommendations": [
+                "Start gradually if new to fasting - try 12 hours first, then increase",
+                "Stay well-hydrated during fasting periods",
+                "Focus on nutrient-dense foods during eating windows",
+                "Consider taking electrolytes during longer fasts",
+                "Consult a healthcare provider before starting if you have any medical conditions"
             ],
-            "success_criteria": [
-                "Increase in deep sleep percentage",
-                "More consistent sleep and wake times",
-                "Reduced sleep latency",
-                "Improved subjective sleep quality",
+            "expected_outcomes": [
+                "Potential weight loss",
+                "Improved insulin sensitivity",
+                "Reduced inflammation markers",
+                "Increased energy levels after adaptation period",
+                "Potential improvements in heart rate variability"
             ],
+            "category": "nutrition"
         },
-        "activity_building": {
-            "overview": "The Activity Building Protocol is designed to gradually increase physical activity levels while ensuring proper recovery.",
-            "goals": [
-                "Increase daily step count",
-                "Improve cardiovascular fitness",
-                "Enhance activity consistency",
-                "Balance activity with recovery",
+        "sleep-optimization": {
+            "name": "Sleep Optimization Protocol",
+            "description": "Improve sleep quality through consistent sleep schedule, evening routine, and sleep environment optimization. Track sleep metrics to measure improvements.",
+            "target_metrics": ["sleep"],
+            "duration_type": "fixed",
+            "duration_days": 30,
+            "steps": [
+                "Establish a consistent sleep and wake time (even on weekends)",
+                "Create a relaxing bedtime routine (30-60 minutes before sleep)",
+                "Optimize your sleep environment (dark, cool, quiet)",
+                "Avoid screens 1 hour before bedtime",
+                "Track sleep duration and quality daily",
+                "Limit caffeine after noon and alcohol before bed"
             ],
-            "metrics_tracked": [
-                {"name": "Daily Steps", "description": "Total steps taken each day", "target": "Progressive increase"},
-                {"name": "Active Minutes", "description": "Time spent in moderate to vigorous activity", "target": "150+ minutes/week"},
-                {"name": "Resting Heart Rate", "description": "Heart rate at complete rest", "target": "Decrease over time"},
-                {"name": "Recovery Score", "description": "Measure of physiological recovery", "target": "Maintain healthy levels"},
+            "recommendations": [
+                "Use blackout curtains or a sleep mask for darkness",
+                "Consider white noise for sound masking if needed",
+                "Keep bedroom temperature between 60-67°F (15-19°C)",
+                "Try relaxation techniques like deep breathing before sleep",
+                "If you can't sleep after 20 minutes, get up and do something relaxing until tired"
             ],
-            "phases": [
-                {"name": "Baseline Phase", "duration": "7 days", "description": "Establish current activity patterns and fitness level."},
-                {
-                    "name": "Progressive Loading Phase",
-                    "duration": "14 days",
-                    "description": "Gradually increase activity volume and intensity.",
-                },
-                {"name": "Integration Phase", "duration": "9 days", "description": "Solidify new activity patterns into daily routine."},
+            "expected_outcomes": [
+                "Reduced time to fall asleep",
+                "Fewer nighttime awakenings",
+                "Increased deep and REM sleep",
+                "Improved daytime energy and alertness",
+                "Better overall sleep quality scores"
             ],
-            "success_criteria": [
-                "Sustainable increase in daily step count",
-                "Improved cardiovascular metrics",
-                "Consistent activity patterns",
-                "Balanced activity and recovery",
-            ],
+            "category": "sleep"
         },
-        "recovery": {
-            "overview": "The Recovery Protocol is designed to optimize physiological recovery after periods of high stress or intense activity.",
-            "goals": [
-                "Improve sleep quality",
-                "Reduce resting heart rate",
-                "Increase heart rate variability",
-                "Enhance subjective recovery",
+        "daily-10k-steps": {
+            "name": "Daily 10,000 Steps Challenge",
+            "description": "Commit to walking 10,000 steps every day to improve cardiovascular health, manage weight, and boost energy levels.",
+            "target_metrics": ["activity"],
+            "duration_type": "fixed",
+            "duration_days": 30,
+            "steps": [
+                "Track your baseline step count for 3 days",
+                "Gradually increase daily steps by 1,000 each week until reaching 10,000",
+                "Schedule dedicated walking times throughout the day",
+                "Take the stairs instead of elevators when possible",
+                "Park farther away from entrances",
+                "Consider walking meetings or phone calls"
             ],
-            "metrics_tracked": [
-                {"name": "Sleep Quality", "description": "Overall sleep score", "target": "80+ out of 100"},
-                {"name": "Resting Heart Rate", "description": "Heart rate at complete rest", "target": "Return to baseline or lower"},
-                {
-                    "name": "Heart Rate Variability",
-                    "description": "Variation in time between heartbeats",
-                    "target": "Increase from baseline",
-                },
-                {"name": "Subjective Recovery", "description": "Self-reported recovery feeling", "target": "Consistent improvement"},
+            "recommendations": [
+                "Invest in comfortable, supportive walking shoes",
+                "Break up steps throughout the day rather than all at once",
+                "Use a reliable step tracker (phone or wearable device)",
+                "Find walking buddies for accountability",
+                "Have indoor alternatives for bad weather days"
             ],
-            "phases": [
-                {"name": "Deload Phase", "duration": "5 days", "description": "Significant reduction in activity intensity and volume."},
-                {"name": "Active Recovery Phase", "duration": "5 days", "description": "Introduction of light, restorative activities."},
-                {"name": "Reintegration Phase", "duration": "4 days", "description": "Gradual return to normal activity levels."},
+            "expected_outcomes": [
+                "Improved cardiovascular fitness",
+                "Potential weight management benefits",
+                "Increased energy levels",
+                "Better mood and reduced stress",
+                "Improved sleep quality"
             ],
-            "success_criteria": [
-                "Improved sleep metrics",
-                "Decreased resting heart rate",
-                "Increased heart rate variability",
-                "Enhanced subjective recovery scores",
-            ],
+            "category": "fitness"
         },
-        "hrv_improvement": {
-            "overview": "The Heart Rate Variability Improvement Protocol aims to enhance autonomic nervous system function through targeted interventions.",
-            "goals": [
-                "Increase overall HRV",
-                "Improve stress resilience",
-                "Enhance recovery capacity",
-                "Balance sympathetic and parasympathetic activity",
+        "meditation-practice": {
+            "name": "Daily Meditation Practice",
+            "description": "Establish a daily meditation practice to reduce stress, improve focus, and enhance overall well-being. Track mood and heart rate to observe benefits.",
+            "target_metrics": ["mood", "heart_rate"],
+            "duration_type": "fixed",
+            "duration_days": 21,
+            "steps": [
+                "Start with 5 minutes of meditation daily, gradually increasing to 20 minutes",
+                "Choose a consistent time each day for practice",
+                "Find a quiet space with minimal distractions",
+                "Track mood before and after meditation sessions",
+                "Monitor resting heart rate trends over time",
+                "Try different meditation techniques to find what works best"
             ],
-            "metrics_tracked": [
-                {"name": "HRV (RMSSD)", "description": "Root Mean Square of Successive Differences", "target": "Progressive increase"},
-                {"name": "Resting Heart Rate", "description": "Heart rate at complete rest", "target": "Decrease over time"},
-                {"name": "Sleep Quality", "description": "Overall sleep score", "target": "80+ out of 100"},
-                {"name": "Stress Score", "description": "Measure of physiological stress", "target": "Decrease over time"},
+            "recommendations": [
+                "Use guided meditation apps for beginners",
+                "Focus on breath as an anchor when mind wanders",
+                "Be patient and non-judgmental with yourself",
+                "Consider body scan, loving-kindness, or mindfulness techniques",
+                "Consistency matters more than duration"
             ],
-            "phases": [
-                {
-                    "name": "Assessment Phase",
-                    "duration": "5 days",
-                    "description": "Establish baseline HRV patterns and identify factors affecting it.",
-                },
-                {"name": "Intervention Phase", "duration": "12 days", "description": "Implement targeted practices to improve HRV."},
-                {"name": "Integration Phase", "duration": "4 days", "description": "Solidify habits that positively impact HRV."},
+            "expected_outcomes": [
+                "Reduced stress levels",
+                "Lower resting heart rate",
+                "Improved heart rate variability",
+                "Better emotional regulation",
+                "Enhanced focus and attention",
+                "Improved sleep quality"
             ],
-            "success_criteria": [
-                "Increased average HRV",
-                "Improved HRV trends during sleep",
-                "Enhanced stress resilience",
-                "Better recovery metrics",
-            ],
+            "category": "mental-health"
         },
-        "stress_reduction": {
-            "overview": "The Stress Reduction Protocol is designed to lower physiological and psychological stress levels through targeted interventions.",
-            "goals": [
-                "Reduce physiological stress markers",
-                "Improve stress resilience",
-                "Enhance sleep quality",
-                "Improve mood and emotional well-being",
+        "low-carb-diet": {
+            "name": "Low-Carb Nutrition Plan",
+            "description": "Follow a low-carbohydrate diet to manage weight, blood sugar levels, and improve metabolic health. Track calories, weight, and energy levels.",
+            "target_metrics": ["calories", "weight", "event"],
+            "duration_type": "fixed",
+            "duration_days": 30,
+            "steps": [
+                "Reduce daily carbohydrate intake to 50-100g per day",
+                "Increase protein and healthy fat consumption",
+                "Eliminate refined sugars and processed carbohydrates",
+                "Track all food intake and macronutrient ratios",
+                "Monitor weight changes 2-3 times per week",
+                "Log energy levels and hunger patterns daily"
             ],
-            "metrics_tracked": [
-                {"name": "Resting Heart Rate", "description": "Heart rate at complete rest", "target": "Decrease over time"},
-                {
-                    "name": "Heart Rate Variability",
-                    "description": "Variation in time between heartbeats",
-                    "target": "Increase from baseline",
-                },
-                {"name": "Sleep Quality", "description": "Overall sleep score", "target": "80+ out of 100"},
-                {"name": "Mood Score", "description": "Self-reported mood rating", "target": "Consistent improvement"},
+            "recommendations": [
+                "Focus on whole foods: meat, fish, eggs, vegetables, nuts, and seeds",
+                "Stay well-hydrated as low-carb diets can increase water loss",
+                "Consider electrolyte supplementation",
+                "Prepare meals at home to control ingredients",
+                "Read food labels carefully for hidden carbs"
             ],
-            "phases": [
-                {
-                    "name": "Awareness Phase",
-                    "duration": "7 days",
-                    "description": "Identify stress triggers and establish baseline stress patterns.",
-                },
-                {
-                    "name": "Intervention Phase",
-                    "duration": "14 days",
-                    "description": "Implement stress reduction techniques and lifestyle modifications.",
-                },
-                {
-                    "name": "Integration Phase",
-                    "duration": "7 days",
-                    "description": "Solidify stress management practices into daily routine.",
-                },
+            "expected_outcomes": [
+                "Potential weight loss",
+                "Reduced hunger and cravings",
+                "More stable energy levels throughout the day",
+                "Improved blood sugar control",
+                "Potential improvements in cholesterol profiles"
             ],
-            "success_criteria": [
-                "Decreased resting heart rate",
-                "Increased heart rate variability",
-                "Improved sleep quality",
-                "Enhanced mood scores",
-            ],
+            "category": "nutrition"
         },
+        "hydration-challenge": {
+            "name": "Optimal Hydration Challenge",
+            "description": "Drink adequate water daily to improve energy, skin health, and overall well-being. Track water intake and observe effects on other health metrics.",
+            "target_metrics": ["event", "mood"],
+            "duration_type": "fixed",
+            "duration_days": 14,
+            "steps": [
+                "Calculate your target daily water intake (typically 0.5-1 oz per pound of body weight)",
+                "Track water consumption throughout the day",
+                "Set up regular reminders to drink water",
+                "Monitor changes in energy, skin appearance, and digestion",
+                "Reduce intake of dehydrating beverages (alcohol, caffeine)",
+                "Check urine color as a hydration indicator (pale yellow is optimal)"
+            ],
+            "recommendations": [
+                "Carry a reusable water bottle with volume markings",
+                "Drink a glass of water first thing in the morning",
+                "Set up water intake reminders on your phone",
+                "Infuse water with fruit or herbs for flavor if needed",
+                "Increase intake during exercise or hot weather"
+            ],
+            "expected_outcomes": [
+                "Improved energy levels",
+                "Better skin appearance and elasticity",
+                "Enhanced cognitive function",
+                "Improved digestion and regularity",
+                "Reduced headaches",
+                "Better exercise performance"
+            ],
+            "category": "nutrition"
+        },
+        "strength-training": {
+            "name": "Progressive Strength Training",
+            "description": "Follow a progressive strength training program to build muscle, increase metabolism, and improve overall fitness.",
+            "target_metrics": ["activity", "weight"],
+            "duration_type": "fixed",
+            "duration_days": 60,
+            "steps": [
+                "Perform strength training 3-4 times per week",
+                "Focus on major muscle groups with compound exercises",
+                "Start with lighter weights and proper form",
+                "Gradually increase weight or resistance over time",
+                "Allow 48 hours of recovery between training the same muscle group",
+                "Track workouts, weights used, and progress"
+            ],
+            "recommendations": [
+                "Begin each session with a proper warm-up",
+                "Focus on form over weight, especially when starting",
+                "Include a mix of pushing, pulling, and lower body exercises",
+                "Ensure adequate protein intake (1.6-2.2g per kg of body weight)",
+                "Get sufficient sleep for recovery",
+                "Consider working with a trainer initially for proper form"
+            ],
+            "expected_outcomes": [
+                "Increased muscle strength and endurance",
+                "Improved body composition",
+                "Enhanced metabolic rate",
+                "Better posture and reduced risk of injury",
+                "Improved bone density",
+                "Enhanced overall functional fitness"
+            ],
+            "category": "fitness"
+        },
+        "stress-reduction": {
+            "name": "Stress Reduction Protocol",
+            "description": "Implement daily stress reduction techniques to improve mental health, sleep quality, and reduce physiological stress markers.",
+            "target_metrics": ["mood", "sleep", "heart_rate"],
+            "duration_type": "fixed",
+            "duration_days": 28,
+            "steps": [
+                "Practice deep breathing exercises for 5 minutes, 3 times daily",
+                "Implement a daily 15-minute mindfulness practice",
+                "Reduce screen time, especially before bed",
+                "Spend at least 20 minutes outdoors daily",
+                "Journal about stressors and gratitude each evening",
+                "Track mood, sleep quality, and heart rate daily"
+            ],
+            "recommendations": [
+                "Try different relaxation techniques to find what works best",
+                "Create clear boundaries between work and personal time",
+                "Limit news and social media consumption",
+                "Consider apps for guided relaxation and mindfulness",
+                "Prioritize social connections and support systems"
+            ],
+            "expected_outcomes": [
+                "Reduced perceived stress levels",
+                "Lower resting heart rate",
+                "Improved heart rate variability",
+                "Better sleep quality and duration",
+                "Enhanced mood stability",
+                "Improved ability to manage stressful situations"
+            ],
+            "category": "mental-health"
+        }
     }
-
-    # Return details for the requested template
-    return protocol_details.get(template_id, {"overview": "Detailed information not available for this protocol template."})
+    
+    # Return the template details if found, otherwise return None
+    return template_details.get(template_id)
 
 
 def get_protocol_effectiveness_metrics(protocol_id: UUID, db: Session) -> Dict[str, Any]:

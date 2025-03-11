@@ -15,7 +15,7 @@ from app.schemas.user_protocol import (
 from app.services.user_protocol import (
     delete_user_protocol,
     enroll_user_in_protocol,
-    get_active_user_protocols,
+    get_active_protocols,
     get_user_protocol,
     get_user_protocol_ai_adjustments,
     get_user_protocol_ai_analysis,
@@ -53,7 +53,7 @@ def read_active_user_protocols(*, db: Session = Depends(get_db), current_user: U
     """
     Retrieve active user protocols.
     """
-    user_protocols = get_active_user_protocols(db=db, user_id=current_user.id)
+    user_protocols = get_active_protocols(db=db, user_id=str(current_user.id))
     return user_protocols
 
 

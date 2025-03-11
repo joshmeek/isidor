@@ -9,31 +9,13 @@ import * as api from '@/services/api';
 import { spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
-// Types for protocols
-interface Protocol {
-  id: string;
-  name: string;
-  description: string;
-  target_metrics: string[];
-  duration_type: string;
-  duration_days: number;
-}
-
-// Types for user protocols
-interface UserProtocol {
-  id: string;
-  user_id: string;
-  protocol_id: string;
-  start_date: string;
-  end_date?: string;
-  status: string;
-  protocol?: Protocol;
-}
+// Use the types from the API service
+import { Protocol, UserProtocol, UserProtocolWithProtocol } from '@/services/api';
 
 export default function ProtocolsScreen() {
   const { user } = useAuth();
   const [protocols, setProtocols] = useState<Protocol[]>([]);
-  const [userProtocols, setUserProtocols] = useState<UserProtocol[]>([]);
+  const [userProtocols, setUserProtocols] = useState<UserProtocolWithProtocol[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +48,14 @@ export default function ProtocolsScreen() {
       setIsLoading(false);
     } catch (err) {
       console.error('Error loading protocols data:', err);
-      setError('Failed to load protocols. Please try again.');
+      
+      // Check if it's an authentication error
+      if (err instanceof api.ApiError && err.status === 401) {
+        setError('Authentication failed. Please log in again.');
+      } else {
+        setError('Failed to load protocols. Please try again.');
+      }
+      
       setIsLoading(false);
     }
   };
@@ -103,7 +92,7 @@ export default function ProtocolsScreen() {
 
   // Check if user is enrolled in a protocol
   const isEnrolled = (protocolId: string) => {
-    return userProtocols.some(up => up.protocol_id === protocolId);
+    return userProtocols.some(up => up.protocol?.id === protocolId);
   };
 
   // Render available protocols
@@ -134,6 +123,14 @@ export default function ProtocolsScreen() {
                 return { name: 'heart', color: '#FF2D55' };
               case 'mood':
                 return { name: 'happy', color: '#34C759' };
+              case 'weight':
+                return { name: 'barbell', color: '#AF52DE' };
+              case 'blood_pressure':
+                return { name: 'pulse', color: '#FF3B30' };
+              case 'calories':
+                return { name: 'restaurant', color: '#FF9500' };
+              case 'event':
+                return { name: 'calendar', color: '#5856D6' };
               default:
                 return { name: 'analytics', color: primaryColor };
             }
@@ -143,7 +140,7 @@ export default function ProtocolsScreen() {
             <Card
               key={protocol.id}
               title={protocol.name}
-              subtitle={`${protocol.duration_days} days`}
+              subtitle={protocol.duration_days ? `${protocol.duration_days} days` : 'Ongoing'}
               leftIcon={<Ionicons name="list" size={24} color={secondaryColor} />}
               style={styles.protocolCard}
               onPress={() => router.push(`/protocol-details?id=${protocol.id}`)}
@@ -210,7 +207,7 @@ export default function ProtocolsScreen() {
           let progress = 0;
           let daysLeft = 0;
           
-          if (protocol.duration_type === 'fixed' && protocol.duration_days > 0) {
+          if (protocol.duration_days && protocol.duration_days > 0) {
             const totalDays = protocol.duration_days;
             const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
             daysLeft = Math.max(0, totalDays - daysPassed);
@@ -221,10 +218,10 @@ export default function ProtocolsScreen() {
           const statusText = userProtocol.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
           
           // Determine status color
-          let statusColor = '#0066CC'; // Default blue
+          let statusColor = '#0066CC'; // Default blue for active
           if (userProtocol.status === 'completed') {
             statusColor = '#34C759'; // Green
-          } else if (userProtocol.status === 'abandoned') {
+          } else if (userProtocol.status === 'cancelled' || userProtocol.status === 'paused') {
             statusColor = '#FF3B30'; // Red
           }
           
@@ -235,7 +232,7 @@ export default function ProtocolsScreen() {
               subtitle={`Started: ${new Date(userProtocol.start_date).toLocaleDateString()}`}
               leftIcon={<Ionicons name="list" size={24} color={secondaryColor} />}
               style={styles.protocolCard}
-              onPress={() => router.push(`/protocol-details?id=${userProtocol.id}`)}
+              onPress={() => router.push(`/protocol-details?id=${userProtocol.id}&type=user`)}
               footer={
                 <View style={styles.protocolFooter}>
                   <View style={styles.statusContainer}>
@@ -249,12 +246,12 @@ export default function ProtocolsScreen() {
                     variant="outline"
                     size="sm"
                     rightIcon="chevron-forward"
-                    onPress={() => router.push(`/protocol-details?id=${userProtocol.id}`)}
+                    onPress={() => router.push(`/protocol-details?id=${userProtocol.id}&type=user`)}
                   />
                 </View>
               }
             >
-              {protocol.duration_type === 'fixed' && (
+              {protocol.duration_days && protocol.duration_days > 0 && (
                 <View style={styles.progressContainer}>
                   <View style={styles.progressBar}>
                     <View 
@@ -268,9 +265,11 @@ export default function ProtocolsScreen() {
                   <ThemedText variant="bodySmall" secondary>
                     {userProtocol.status === 'completed' 
                       ? 'Completed' 
-                      : userProtocol.status === 'abandoned'
-                        ? 'Abandoned'
-                        : `${daysLeft} days left`}
+                      : userProtocol.status === 'cancelled'
+                        ? 'Cancelled'
+                        : userProtocol.status === 'paused'
+                          ? 'Paused'
+                          : `${daysLeft} days left`}
                   </ThemedText>
                 </View>
               )}

@@ -1,4 +1,11 @@
-from app.api.endpoints import ai, auth, health_metrics, protocols, user_protocols, users
+from app.api.endpoints import (
+    ai,
+    auth,
+    health_metrics,
+    users,
+    protocols,
+    user_protocols,
+)
 from fastapi import APIRouter
 
 api_router = APIRouter()
