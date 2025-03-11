@@ -50,7 +50,9 @@ router = APIRouter()
                 "application/json": {
                     "example": {
                         "detail": {
-                            "errors": ["Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood, calories, event"]
+                            "errors": [
+                                "Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood, calories, event"
+                            ]
                         }
                     }
                 }

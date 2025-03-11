@@ -1,7 +1,7 @@
 import os
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from datetime import datetime, timedelta
 
 from app.models.ai_memory import AIMemory
 from app.models.health_metric import HealthMetric
@@ -19,7 +19,7 @@ def retrieve_context_for_user(
     metric_types: Optional[List[str]] = None,
     max_metrics_per_type: int = 5,
     min_similarity: float = float(os.getenv("SIMILARITY_THRESHOLD", "0.7")),
-    time_frame: str = "last_day"
+    time_frame: str = "last_day",
 ) -> Dict[str, Any]:
     """
     Retrieve relevant context for a user based on a query.
@@ -30,7 +30,7 @@ def retrieve_context_for_user(
     3. Retrieving the user's AI memory
     4. Retrieving the user's active protocols
     5. Combining these into a context object for AI processing
-    
+
     Args:
         db: Database session
         user_id: User ID
@@ -39,7 +39,7 @@ def retrieve_context_for_user(
         max_metrics_per_type: Maximum number of metrics to retrieve per type
         min_similarity: Minimum similarity threshold for vector search
         time_frame: Time frame for the analysis (e.g., "last_day", "last_week")
-    
+
     Returns:
         Dictionary containing the retrieved context
     """
@@ -48,13 +48,13 @@ def retrieve_context_for_user(
 
     # Initialize context
     context = {
-        "query": query, 
-        "health_metrics": {}, 
-        "ai_memory": None, 
-        "memory_insights": [], 
+        "query": query,
+        "health_metrics": {},
+        "ai_memory": None,
+        "memory_insights": [],
         "active_protocols": [],
         "time_frame": time_frame,
-        "debug_info": {}
+        "debug_info": {},
     }
 
     # Import here to avoid circular imports
@@ -63,7 +63,7 @@ def retrieve_context_for_user(
     # Calculate date range based on time_frame
     now = datetime.utcnow()
     start_date = None
-    
+
     if time_frame == "last_day":
         start_date = (now - timedelta(days=1)).date()
     elif time_frame == "last_week":
@@ -79,9 +79,9 @@ def retrieve_context_for_user(
     else:
         # Default to last day if time_frame is not recognized
         start_date = (now - timedelta(days=1)).date()
-    
+
     end_date = now.date()
-    
+
     context["debug_info"]["date_range"] = f"{start_date} to {end_date}"
 
     # Retrieve similar health metrics for each requested metric type
@@ -95,7 +95,7 @@ def retrieve_context_for_user(
                 limit=max_metrics_per_type,
                 min_similarity=min_similarity,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
             )
 
             # Add debug information
@@ -121,7 +121,7 @@ def retrieve_context_for_user(
                 limit=max_metrics_per_type,
                 min_similarity=min_similarity,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
             )
 
             # Add debug information
@@ -142,7 +142,7 @@ def retrieve_context_for_user(
             # Handle case where timestamp might be None
             sorted_insights = sorted(insights, key=lambda x: x.get("timestamp", "") or "", reverse=True)[:10]
             context["memory_insights"] = sorted_insights
-    
+
     # Retrieve active protocols for the user
     active_protocols = get_active_user_protocols(db, user_id)
     if active_protocols:
@@ -155,7 +155,7 @@ def retrieve_context_for_user(
                 "start_date": protocol.start_date.isoformat() if protocol.start_date else None,
                 "status": protocol.status,
             }
-            
+
             # Include protocol details if available
             if hasattr(protocol, "protocol") and protocol.protocol:
                 protocol_dict["name"] = protocol.protocol.name
@@ -163,9 +163,9 @@ def retrieve_context_for_user(
                 protocol_dict["target_metrics"] = protocol.protocol.target_metrics
                 protocol_dict["duration_type"] = protocol.protocol.duration_type
                 protocol_dict["duration_days"] = protocol.protocol.duration_days
-            
+
             protocol_data.append(protocol_dict)
-        
+
         context["active_protocols"] = protocol_data
         context["debug_info"]["active_protocols_count"] = len(protocol_data)
 
@@ -190,19 +190,19 @@ def format_context_for_prompt(context: Dict[str, Any]) -> str:
         prompt_parts.append("## Active Protocols\n")
         for protocol in context["active_protocols"]:
             prompt_parts.append(f"### {protocol.get('name', 'Unnamed Protocol')}\n")
-            
+
             if protocol.get("description"):
                 prompt_parts.append(f"Description: {protocol['description']}\n")
-            
+
             if protocol.get("target_metrics"):
                 prompt_parts.append(f"Target Metrics: {', '.join(protocol['target_metrics'])}\n")
-            
+
             if protocol.get("start_date"):
                 prompt_parts.append(f"Started: {protocol['start_date']}\n")
-            
+
             if protocol.get("duration_type") and protocol.get("duration_days"):
                 prompt_parts.append(f"Duration: {protocol['duration_days']} days ({protocol['duration_type']})\n")
-            
+
             prompt_parts.append("\n")
 
     # Add AI memory if available

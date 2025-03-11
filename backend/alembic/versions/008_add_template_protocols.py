@@ -5,15 +5,17 @@ Revises: 007_add_timestamps_to_protocols
 Create Date: 2025-03-12 10:30:00.000000
 
 """
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+
 import uuid
 from datetime import datetime
 
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
+
 # revision identifiers, used by Alembic.
-revision = '008_add_template_protocols'
-down_revision = '007_add_timestamps_to_protocols'
+revision = "008_add_template_protocols"
+down_revision = "007_add_timestamps_to_protocols"
 branch_labels = None
 depends_on = None
 
@@ -31,26 +33,26 @@ TEMPLATE_PROTOCOLS = [
             "Optimize your sleep environment (dark, cool, quiet)",
             "Avoid screens 1 hour before bedtime",
             "Track sleep duration and quality daily",
-            "Limit caffeine after noon and alcohol before bed"
+            "Limit caffeine after noon and alcohol before bed",
         ],
         "recommendations": [
             "Use blackout curtains or a sleep mask for darkness",
             "Consider white noise for sound masking if needed",
             "Keep bedroom temperature between 60-67°F (15-19°C)",
             "Try relaxation techniques like deep breathing before sleep",
-            "If you can't sleep after 20 minutes, get up and do something relaxing until tired"
+            "If you can't sleep after 20 minutes, get up and do something relaxing until tired",
         ],
         "expected_outcomes": [
             "Reduced time to fall asleep",
             "Fewer nighttime awakenings",
             "Increased deep and REM sleep",
             "Improved daytime energy and alertness",
-            "Better overall sleep quality scores"
+            "Better overall sleep quality scores",
         ],
         "category": "sleep",
         "duration_type": "fixed",
         "duration_days": 30,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d480",  # Fixed UUID for Daily Activity Challenge
@@ -64,26 +66,26 @@ TEMPLATE_PROTOCOLS = [
             "Schedule dedicated walking times throughout the day",
             "Take the stairs instead of elevators when possible",
             "Park farther away from entrances",
-            "Consider walking meetings or phone calls"
+            "Consider walking meetings or phone calls",
         ],
         "recommendations": [
             "Invest in comfortable, supportive walking shoes",
             "Break up steps throughout the day rather than all at once",
             "Use a reliable step tracker (phone or wearable device)",
             "Find walking buddies for accountability",
-            "Have indoor alternatives for bad weather days"
+            "Have indoor alternatives for bad weather days",
         ],
         "expected_outcomes": [
             "Improved cardiovascular fitness",
             "Potential weight management benefits",
             "Increased energy levels",
             "Better mood and reduced stress",
-            "Improved sleep quality"
+            "Improved sleep quality",
         ],
         "category": "fitness",
         "duration_type": "fixed",
         "duration_days": 21,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d481",  # Fixed UUID for Intermittent Fasting
@@ -97,26 +99,26 @@ TEMPLATE_PROTOCOLS = [
             "During fasting hours, drink water, black coffee, or unsweetened tea",
             "Track your weight regularly to monitor progress",
             "Log your meals and caloric intake during eating windows",
-            "Monitor how you feel throughout the day"
+            "Monitor how you feel throughout the day",
         ],
         "recommendations": [
             "Start gradually if new to fasting - try 12 hours first, then increase",
             "Stay well-hydrated during fasting periods",
             "Focus on nutrient-dense foods during eating windows",
             "Consider taking electrolytes during longer fasts",
-            "Consult a healthcare provider before starting if you have any medical conditions"
+            "Consult a healthcare provider before starting if you have any medical conditions",
         ],
         "expected_outcomes": [
             "Potential weight loss",
             "Improved insulin sensitivity",
             "Reduced inflammation markers",
             "Increased energy levels after adaptation period",
-            "Potential improvements in heart rate variability"
+            "Potential improvements in heart rate variability",
         ],
         "category": "nutrition",
         "duration_type": "ongoing",
         "duration_days": 30,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d482",  # Fixed UUID for Meditation Practice
@@ -130,14 +132,14 @@ TEMPLATE_PROTOCOLS = [
             "Find a quiet space with minimal distractions",
             "Track mood before and after meditation sessions",
             "Monitor resting heart rate trends over time",
-            "Try different meditation techniques to find what works best"
+            "Try different meditation techniques to find what works best",
         ],
         "recommendations": [
             "Use guided meditation apps for beginners",
             "Focus on breath as an anchor when mind wanders",
             "Be patient and non-judgmental with yourself",
             "Consider body scan, loving-kindness, or mindfulness techniques",
-            "Consistency matters more than duration"
+            "Consistency matters more than duration",
         ],
         "expected_outcomes": [
             "Reduced stress levels",
@@ -145,12 +147,12 @@ TEMPLATE_PROTOCOLS = [
             "Improved heart rate variability",
             "Better emotional regulation",
             "Enhanced focus and attention",
-            "Improved sleep quality"
+            "Improved sleep quality",
         ],
         "category": "mental-health",
         "duration_type": "fixed",
         "duration_days": 21,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d483",  # Fixed UUID for Low-Carb Diet
@@ -164,26 +166,26 @@ TEMPLATE_PROTOCOLS = [
             "Eliminate refined sugars and processed carbohydrates",
             "Track all food intake and macronutrient ratios",
             "Monitor weight changes 2-3 times per week",
-            "Log energy levels and hunger patterns daily"
+            "Log energy levels and hunger patterns daily",
         ],
         "recommendations": [
             "Focus on whole foods: meat, fish, eggs, vegetables, nuts, and seeds",
             "Stay well-hydrated as low-carb diets can increase water loss",
             "Consider electrolyte supplementation",
             "Prepare meals at home to control ingredients",
-            "Read food labels carefully for hidden carbs"
+            "Read food labels carefully for hidden carbs",
         ],
         "expected_outcomes": [
             "Potential weight loss",
             "Reduced hunger and cravings",
             "More stable energy levels throughout the day",
             "Improved blood sugar control",
-            "Potential improvements in cholesterol profiles"
+            "Potential improvements in cholesterol profiles",
         ],
         "category": "nutrition",
         "duration_type": "fixed",
         "duration_days": 30,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d484",  # Fixed UUID for Hydration Challenge
@@ -197,14 +199,14 @@ TEMPLATE_PROTOCOLS = [
             "Set up regular reminders to drink water",
             "Monitor changes in energy, skin appearance, and digestion",
             "Reduce intake of dehydrating beverages (alcohol, caffeine)",
-            "Check urine color as a hydration indicator (pale yellow is optimal)"
+            "Check urine color as a hydration indicator (pale yellow is optimal)",
         ],
         "recommendations": [
             "Carry a reusable water bottle with volume markings",
             "Drink a glass of water first thing in the morning",
             "Set up water intake reminders on your phone",
             "Infuse water with fruit or herbs for flavor if needed",
-            "Increase intake during exercise or hot weather"
+            "Increase intake during exercise or hot weather",
         ],
         "expected_outcomes": [
             "Improved energy levels",
@@ -212,12 +214,12 @@ TEMPLATE_PROTOCOLS = [
             "Enhanced cognitive function",
             "Improved digestion and regularity",
             "Reduced headaches",
-            "Better exercise performance"
+            "Better exercise performance",
         ],
         "category": "nutrition",
         "duration_type": "fixed",
         "duration_days": 14,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d485",  # Fixed UUID for Strength Training
@@ -231,7 +233,7 @@ TEMPLATE_PROTOCOLS = [
             "Start with lighter weights and proper form",
             "Gradually increase weight or resistance over time",
             "Allow 48 hours of recovery between training the same muscle group",
-            "Track workouts, weights used, and progress"
+            "Track workouts, weights used, and progress",
         ],
         "recommendations": [
             "Begin each session with a proper warm-up",
@@ -239,7 +241,7 @@ TEMPLATE_PROTOCOLS = [
             "Include a mix of pushing, pulling, and lower body exercises",
             "Ensure adequate protein intake (1.6-2.2g per kg of body weight)",
             "Get sufficient sleep for recovery",
-            "Consider working with a trainer initially for proper form"
+            "Consider working with a trainer initially for proper form",
         ],
         "expected_outcomes": [
             "Increased muscle strength and endurance",
@@ -247,12 +249,12 @@ TEMPLATE_PROTOCOLS = [
             "Enhanced metabolic rate",
             "Better posture and reduced risk of injury",
             "Improved bone density",
-            "Enhanced overall functional fitness"
+            "Enhanced overall functional fitness",
         ],
         "category": "fitness",
         "duration_type": "fixed",
         "duration_days": 60,
-        "status": "active"
+        "status": "active",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d486",  # Fixed UUID for Stress Reduction
@@ -266,14 +268,14 @@ TEMPLATE_PROTOCOLS = [
             "Reduce screen time, especially before bed",
             "Spend at least 20 minutes outdoors daily",
             "Journal about stressors and gratitude each evening",
-            "Track mood, sleep quality, and heart rate daily"
+            "Track mood, sleep quality, and heart rate daily",
         ],
         "recommendations": [
             "Try different relaxation techniques to find what works best",
             "Create clear boundaries between work and personal time",
             "Limit news and social media consumption",
             "Consider apps for guided relaxation and mindfulness",
-            "Prioritize social connections and support systems"
+            "Prioritize social connections and support systems",
         ],
         "expected_outcomes": [
             "Reduced perceived stress levels",
@@ -281,28 +283,28 @@ TEMPLATE_PROTOCOLS = [
             "Improved heart rate variability",
             "Better sleep quality and duration",
             "Enhanced mood stability",
-            "Improved ability to manage stressful situations"
+            "Improved ability to manage stressful situations",
         ],
         "category": "mental-health",
         "duration_type": "fixed",
         "duration_days": 28,
-        "status": "active"
-    }
+        "status": "active",
+    },
 ]
 
 
 def upgrade():
     # Get the protocols table
     protocols = sa.table(
-        'protocols',
-        sa.column('id', postgresql.UUID),
-        sa.column('name', sa.String),
-        sa.column('description', sa.String),
-        sa.column('target_metrics', postgresql.ARRAY(sa.String)),
-        sa.column('duration_type', sa.String),
-        sa.column('duration_days', sa.Integer)
+        "protocols",
+        sa.column("id", postgresql.UUID),
+        sa.column("name", sa.String),
+        sa.column("description", sa.String),
+        sa.column("target_metrics", postgresql.ARRAY(sa.String)),
+        sa.column("duration_type", sa.String),
+        sa.column("duration_days", sa.Integer),
     )
-    
+
     # Insert template protocols
     current_time = datetime.now()
     for protocol in TEMPLATE_PROTOCOLS:
@@ -313,7 +315,7 @@ def upgrade():
                 description=protocol["description"],
                 target_metrics=protocol["target_metrics"],
                 duration_type=protocol["duration_type"],
-                duration_days=protocol["duration_days"]
+                duration_days=protocol["duration_days"],
             )
         )
 
@@ -321,4 +323,4 @@ def upgrade():
 def downgrade():
     # Delete the template protocols
     for protocol in TEMPLATE_PROTOCOLS:
-        op.execute(f"DELETE FROM protocols WHERE id = '{protocol['id']}'") 
+        op.execute(f"DELETE FROM protocols WHERE id = '{protocol['id']}'")

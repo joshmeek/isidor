@@ -79,22 +79,22 @@ VALID_METRIC_TYPES = {
         "required_fields": ["value"],
         "optional_fields": ["body_fat_percentage", "muscle_mass", "bmi", "lean_mass", "water_percentage", "bone_mass"],
         "field_types": {
-            "value": float, 
-            "body_fat_percentage": float, 
-            "muscle_mass": float, 
+            "value": float,
+            "body_fat_percentage": float,
+            "muscle_mass": float,
             "bmi": float,
             "lean_mass": float,
             "water_percentage": float,
-            "bone_mass": float
+            "bone_mass": float,
         },
         "field_ranges": {
-            "value": (20, 500), 
-            "body_fat_percentage": (1, 60), 
-            "muscle_mass": (10, 200), 
+            "value": (20, 500),
+            "body_fat_percentage": (1, 60),
+            "muscle_mass": (10, 200),
             "bmi": (10, 60),
             "lean_mass": (10, 200),
             "water_percentage": (1, 80),
-            "bone_mass": (0.5, 10)
+            "bone_mass": (0.5, 10),
         },
     },
     "mood": {
@@ -106,35 +106,14 @@ VALID_METRIC_TYPES = {
     "calories": {
         "required_fields": ["total"],
         "optional_fields": ["protein", "fat", "carbs", "meal_type", "meal_name", "notes"],
-        "field_types": {
-            "total": int,
-            "protein": float,
-            "fat": float,
-            "carbs": float,
-            "meal_type": str,
-            "meal_name": str,
-            "notes": str
-        },
-        "field_ranges": {
-            "total": (0, 5000),
-            "protein": (0, 500),
-            "fat": (0, 500),
-            "carbs": (0, 500)
-        },
+        "field_types": {"total": int, "protein": float, "fat": float, "carbs": float, "meal_type": str, "meal_name": str, "notes": str},
+        "field_ranges": {"total": (0, 5000), "protein": (0, 500), "fat": (0, 500), "carbs": (0, 500)},
     },
     "event": {
         "required_fields": ["event_type"],
         "optional_fields": ["notes", "duration_minutes", "intensity"],
-        "field_types": {
-            "event_type": str,
-            "notes": str,
-            "duration_minutes": int,
-            "intensity": int
-        },
-        "field_ranges": {
-            "duration_minutes": (0, 1440),
-            "intensity": (1, 10)
-        },
+        "field_types": {"event_type": str, "notes": str, "duration_minutes": int, "intensity": int},
+        "field_ranges": {"duration_minutes": (0, 1440), "intensity": (1, 10)},
     },
 }
 

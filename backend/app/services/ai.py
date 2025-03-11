@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import google.generativeai as genai
+from app.services.ai_cache import create_cached_response, generate_query_hash, get_cached_response
 from app.services.ai_memory import create_or_update_ai_memory, get_ai_memory
-from app.services.ai_cache import generate_query_hash, get_cached_response, create_cached_response
 from app.utils.rag import format_context_for_prompt, retrieve_context_for_user
 from sqlalchemy.orm import Session
 
@@ -30,13 +30,13 @@ Limit your response to 3-5 sentences whenever possible.
 
 
 async def generate_health_insight(
-    db: Session, 
-    user_id: UUID, 
-    query: str, 
-    metric_types: Optional[List[str]] = None, 
+    db: Session,
+    user_id: UUID,
+    query: str,
+    metric_types: Optional[List[str]] = None,
     update_memory: bool = True,
     time_frame: str = "last_day",
-    use_cache: bool = True
+    use_cache: bool = True,
 ) -> Dict[str, Any]:
     """
     Generate health insights using Gemini AI.
@@ -57,25 +57,15 @@ async def generate_health_insight(
     if use_cache:
         query_hash = generate_query_hash(query, metric_types, time_frame=time_frame)
         cached_response = get_cached_response(
-            db=db,
-            user_id=user_id,
-            endpoint="health_insight",
-            time_frame=time_frame,
-            query_hash=query_hash
+            db=db, user_id=user_id, endpoint="health_insight", time_frame=time_frame, query_hash=query_hash
         )
-        
+
         if cached_response:
             print(f"Using cached response for user {user_id}, time_frame {time_frame}")
             return cached_response.response_data
 
     # Retrieve relevant context using RAG
-    context = retrieve_context_for_user(
-        db=db, 
-        user_id=user_id, 
-        query=query, 
-        metric_types=metric_types,
-        time_frame=time_frame
-    )
+    context = retrieve_context_for_user(db=db, user_id=user_id, query=query, metric_types=metric_types, time_frame=time_frame)
 
     # Format context for prompt
     context_text = format_context_for_prompt(context)
@@ -159,19 +149,19 @@ Key insight provided: {insight[:200]}...
 
     # Prepare response data
     response_data = {
-        "response": insight, 
+        "response": insight,
         "metadata": {
-            "model": model_name, 
-            "metric_types": metric_types, 
+            "model": model_name,
+            "metric_types": metric_types,
             "has_memory": ai_memory is not None,
             "has_active_protocols": has_active_protocols,
             "protocol_count": len(context.get("active_protocols", [])),
             "time_frame": time_frame,
-            "cached": False
+            "cached": False,
         },
-        "has_data": has_health_data
+        "has_data": has_health_data,
     }
-    
+
     # Cache the response if enabled
     if use_cache:
         query_hash = generate_query_hash(query, metric_types, time_frame=time_frame)
@@ -183,7 +173,7 @@ Key insight provided: {insight[:200]}...
             query_hash=query_hash,
             response_data=response_data,
             metric_types=metric_types,
-            ttl_hours=24  # Cache for 24 hours
+            ttl_hours=24,  # Cache for 24 hours
         )
 
     # Return the insight
@@ -275,11 +265,7 @@ Key recommendation provided: {protocol_recommendation[:200]}...
 
 
 async def analyze_health_trends(
-    db: Session, 
-    user_id: UUID, 
-    metric_type: str, 
-    time_period: str = "last_month",
-    use_cache: bool = True
+    db: Session, user_id: UUID, metric_type: str, time_period: str = "last_month", use_cache: bool = True
 ) -> Dict[str, Any]:
     """
     Analyze health trends for a specific metric using Gemini AI.
@@ -298,24 +284,20 @@ async def analyze_health_trends(
     if use_cache:
         query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period)
         cached_response = get_cached_response(
-            db=db,
-            user_id=user_id,
-            endpoint="trend_analysis",
-            time_frame=time_period,
-            query_hash=query_hash
+            db=db, user_id=user_id, endpoint="trend_analysis", time_frame=time_period, query_hash=query_hash
         )
-        
+
         if cached_response:
             print(f"Using cached trend analysis for user {user_id}, metric {metric_type}, time_period {time_period}")
             return cached_response.response_data
 
     # Retrieve relevant context using RAG
     context = retrieve_context_for_user(
-        db=db, 
-        user_id=user_id, 
-        query=f"Analyze my {metric_type} trends for the {time_period}", 
+        db=db,
+        user_id=user_id,
+        query=f"Analyze my {metric_type} trends for the {time_period}",
         metric_types=[metric_type],
-        time_frame=time_period
+        time_frame=time_period,
     )
 
     # Check if we have any health metrics data for the requested type
@@ -367,14 +349,14 @@ Key analysis provided: {trend_analysis[:200]}...
         "trend_analysis": trend_analysis,
         "has_data": has_health_data,
         "metadata": {
-            "model": model_name, 
-            "metric_type": metric_type, 
-            "time_period": time_period, 
+            "model": model_name,
+            "metric_type": metric_type,
+            "time_period": time_period,
             "has_memory": ai_memory is not None,
-            "cached": False
+            "cached": False,
         },
     }
-    
+
     # Cache the response if enabled
     if use_cache:
         query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period)
@@ -386,7 +368,7 @@ Key analysis provided: {trend_analysis[:200]}...
             query_hash=query_hash,
             response_data=response_data,
             metric_types=[metric_type],
-            ttl_hours=24  # Cache for 24 hours
+            ttl_hours=24,  # Cache for 24 hours
         )
 
     # Return the trend analysis

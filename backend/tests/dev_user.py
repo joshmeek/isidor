@@ -1,11 +1,11 @@
 import argparse
 import json
 import os
+import random
 import sys
 import uuid
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
-import random
 
 import requests
 
@@ -28,29 +28,37 @@ def generate_sleep_metrics(num_days=30):
     metrics = []
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Generate realistic sleep data
         duration_hours = round(random.uniform(5.5, 9.0), 1)
         deep_sleep_hours = round(duration_hours * random.uniform(0.15, 0.25), 1)
         rem_sleep_hours = round(duration_hours * random.uniform(0.2, 0.3), 1)
         light_sleep_hours = round(duration_hours - deep_sleep_hours - rem_sleep_hours - random.uniform(0.3, 1.0), 1)
         awake_hours = round(duration_hours - deep_sleep_hours - rem_sleep_hours - light_sleep_hours, 1)
-        
+
         # Ensure awake hours is not negative
         awake_hours = max(0.1, awake_hours)
-        
+
         # Calculate sleep score based on duration and composition
-        sleep_score = int(min(100, max(0, 50 + 
-                                    (duration_hours - 7) * 10 + 
-                                    (deep_sleep_hours / duration_hours) * 100 +
-                                    (rem_sleep_hours / duration_hours) * 50 -
-                                    (awake_hours / duration_hours) * 100)))
-        
+        sleep_score = int(
+            min(
+                100,
+                max(
+                    0,
+                    50
+                    + (duration_hours - 7) * 10
+                    + (deep_sleep_hours / duration_hours) * 100
+                    + (rem_sleep_hours / duration_hours) * 50
+                    - (awake_hours / duration_hours) * 100,
+                ),
+            )
+        )
+
         # Generate bedtime and wake time
         bedtime = f"{random.randint(21, 23)}:{random.choice(['00', '15', '30', '45'])}"
         wake_hour = random.randint(5, 8)
         wake_time = f"{wake_hour:02d}:{random.choice(['00', '15', '30', '45'])}"
-        
+
         metric = {
             "date": date,
             "metric_type": "sleep",
@@ -62,13 +70,13 @@ def generate_sleep_metrics(num_days=30):
                 "awake_hours": awake_hours,
                 "sleep_score": sleep_score,
                 "bedtime": bedtime,
-                "wake_time": wake_time
+                "wake_time": wake_time,
             },
             "source": "oura",  # Using valid source
             "id": str(uuid.uuid4()),
         }
         metrics.append(metric)
-    
+
     return metrics
 
 
@@ -77,20 +85,20 @@ def generate_activity_metrics(num_days=30):
     metrics = []
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Generate realistic activity data
         steps = random.randint(2000, 15000)
         distance_km = round(steps * 0.0007, 1)  # Approximate distance based on steps
         active_minutes = random.randint(20, 120)
         floors_climbed = random.randint(5, 25)
-        
+
         # Calculate calories based on activity level
         total_calories = random.randint(1800, 3000)
         active_calories = int(active_minutes * random.uniform(7, 12))
-        
+
         # Calculate activity score
         activity_score = min(100, int(steps / 100 + active_minutes * 0.5))
-        
+
         metric = {
             "date": date,
             "metric_type": "activity",
@@ -101,33 +109,39 @@ def generate_activity_metrics(num_days=30):
                 "floors_climbed": floors_climbed,
                 "total_calories": total_calories,
                 "active_calories": active_calories,
-                "activity_score": activity_score
+                "activity_score": activity_score,
             },
             "source": "healthkit",  # Using valid source
             "id": str(uuid.uuid4()),
         }
         metrics.append(metric)
-    
+
     return metrics
 
 
 def generate_mood_metrics(num_days=30):
     """Generate mood metrics for the past specified number of days."""
     metrics = []
-    
+
     mood_factors = [
-        "work stress", "good sleep", "exercise", "social interaction", 
-        "healthy eating", "meditation", "family time", "outdoor activity"
+        "work stress",
+        "good sleep",
+        "exercise",
+        "social interaction",
+        "healthy eating",
+        "meditation",
+        "family time",
+        "outdoor activity",
     ]
-    
+
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Generate mood data
         rating = random.randint(1, 5)
         energy_level = random.randint(1, 10)
         stress_level = random.randint(1, 10)
-        
+
         # Generate notes based on mood rating
         if rating >= 4:
             notes = f"Feeling {random.choice(['great', 'energetic', 'positive', 'happy'])} today"
@@ -135,21 +149,16 @@ def generate_mood_metrics(num_days=30):
             notes = f"Feeling {random.choice(['okay', 'neutral', 'balanced', 'average'])} today"
         else:
             notes = f"Feeling {random.choice(['tired', 'stressed', 'down', 'low energy'])} but {random.choice(['hopeful', 'productive', 'managing', 'coping'])}"
-        
+
         metric = {
             "date": date,
             "metric_type": "mood",
-            "value": {
-                "rating": rating,
-                "energy_level": energy_level,
-                "stress_level": stress_level,
-                "notes": notes
-            },
+            "value": {"rating": rating, "energy_level": energy_level, "stress_level": stress_level, "notes": notes},
             "source": "manual",  # Using valid source
             "id": str(uuid.uuid4()),
         }
         metrics.append(metric)
-    
+
     return metrics
 
 
@@ -158,11 +167,11 @@ def generate_heart_rate_metrics(num_days=30):
     metrics = []
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Generate multiple readings per day
         readings_count = random.randint(3, 8)
         readings = []
-        
+
         for _ in range(readings_count):
             # Generate realistic heart rate values
             resting = random.randint(55, 75)
@@ -170,77 +179,69 @@ def generate_heart_rate_metrics(num_days=30):
             min_hr = random.randint(45, 65)
             avg_hr = random.randint(65, 85)
             hrv = random.randint(30, 80)
-            
+
             metric = {
                 "date": date,
                 "metric_type": "heart_rate",
-                "value": {
-                    "resting_bpm": resting,
-                    "max_bpm": max_hr,
-                    "min_bpm": min_hr,
-                    "average_bpm": avg_hr,
-                    "hrv_ms": float(hrv)
-                },
+                "value": {"resting_bpm": resting, "max_bpm": max_hr, "min_bpm": min_hr, "average_bpm": avg_hr, "hrv_ms": float(hrv)},
                 "source": "apple_watch",  # Using valid source
                 "id": str(uuid.uuid4()),
             }
             metrics.append(metric)
-    
+
     return metrics
+
 
 def generate_blood_pressure_metrics(num_days=30):
     """Generate blood pressure metrics for the past specified number of days."""
     metrics = []
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Generate multiple readings per day
         readings_count = random.randint(1, 3)
-        
+
         for _ in range(readings_count):
             # Generate realistic blood pressure values
             systolic = random.randint(110, 140)
             diastolic = random.randint(65, 90)
             pulse = random.randint(60, 90)
-            
+
             metric = {
                 "date": date,
                 "metric_type": "blood_pressure",
-                "value": {
-                    "systolic": systolic,
-                    "diastolic": diastolic,
-                    "pulse": pulse
-                },
+                "value": {"systolic": systolic, "diastolic": diastolic, "pulse": pulse},
                 "source": "withings",  # Using valid source
                 "id": str(uuid.uuid4()),
             }
             metrics.append(metric)
-    
+
     return metrics
+
 
 def generate_weight_metrics(num_days=30):
     """Generate weight metrics for the past specified number of days."""
     metrics = []
-    
+
     # Start with a base weight and vary it slightly over time
     base_weight = random.uniform(65.0, 85.0)
     base_body_fat = random.uniform(15.0, 25.0)
     base_bmi = random.uniform(20.0, 25.0)
-    
+
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Add some random variation to the base values
         weight = round(base_weight + random.uniform(-1.5, 1.5), 1)
         body_fat = round(base_body_fat + random.uniform(-1.0, 1.0), 1)
         bmi = round(base_bmi + random.uniform(-0.5, 0.5), 1)
-        
+
         # Calculate other body composition metrics
         muscle_mass = round(weight * (1 - (body_fat / 100)) * 0.85, 1)
         bone_mass = round(weight * 0.04, 1)
         lean_mass = round(weight * (1 - (body_fat / 100)), 1)
         water_percentage = round(50 + random.uniform(0, 10), 1)
-        
+
         metric = {
             "date": date,
             "metric_type": "weight",
@@ -251,30 +252,31 @@ def generate_weight_metrics(num_days=30):
                 "muscle_mass": muscle_mass,
                 "bone_mass": bone_mass,
                 "lean_mass": lean_mass,
-                "water_percentage": water_percentage
+                "water_percentage": water_percentage,
             },
             "source": "withings",  # Using valid source
             "id": str(uuid.uuid4()),
         }
         metrics.append(metric)
-    
+
     return metrics
+
 
 def generate_calories_metrics(num_days=30):
     """Generate calorie metrics for the past specified number of days."""
     metrics = []
-    
+
     meal_types = ["breakfast", "lunch", "dinner", "snack"]
-    
+
     for days_ago in range(num_days):
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         # Generate daily total
         total_calories = random.randint(1800, 2800)
         protein = round(random.uniform(0.8, 1.2) * (total_calories * 0.3) / 4, 1)  # ~30% from protein
-        fat = round(random.uniform(0.8, 1.2) * (total_calories * 0.3) / 9, 1)      # ~30% from fat
-        carbs = round(random.uniform(0.8, 1.2) * (total_calories * 0.4) / 4, 1)     # ~40% from carbs
-        
+        fat = round(random.uniform(0.8, 1.2) * (total_calories * 0.3) / 9, 1)  # ~30% from fat
+        carbs = round(random.uniform(0.8, 1.2) * (total_calories * 0.4) / 4, 1)  # ~40% from carbs
+
         metric = {
             "date": date,
             "metric_type": "calories",
@@ -285,32 +287,33 @@ def generate_calories_metrics(num_days=30):
                 "carbs": carbs,
                 "meal_type": "snack",
                 "meal_name": "Daily total",
-                "notes": "Regular day of eating"
+                "notes": "Regular day of eating",
             },
             "source": "healthkit",  # Using valid source
             "id": str(uuid.uuid4()),
         }
         metrics.append(metric)
-    
+
     return metrics
+
 
 def generate_event_metrics(num_days=30):
     """Generate health event metrics for the past specified number of days."""
     metrics = []
-    
+
     event_types = ["headache", "nausea", "fatigue", "fever", "allergies", "injury"]
-    
+
     for days_ago in range(num_days):
         # Only create events occasionally (1 in 3 days)
         if random.random() > 0.3:
             continue
-            
+
         date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-        
+
         event_type = random.choice(event_types)
         intensity = random.randint(1, 5)
         duration_minutes = random.randint(30, 480)
-        
+
         metric = {
             "date": date,
             "metric_type": "event",
@@ -318,13 +321,13 @@ def generate_event_metrics(num_days=30):
                 "event_type": event_type,
                 "intensity": intensity,
                 "duration_minutes": duration_minutes,
-                "notes": "Health event recorded"
+                "notes": "Health event recorded",
             },
             "source": "manual",  # Using valid source
             "id": str(uuid.uuid4()),
         }
         metrics.append(metric)
-    
+
     return metrics
 
 
@@ -340,14 +343,14 @@ EVENT_METRICS = generate_event_metrics(num_days=60)
 
 # Combine all metrics
 ALL_METRICS = (
-    SLEEP_METRICS + 
-    ACTIVITY_METRICS + 
-    MOOD_METRICS + 
-    HEART_RATE_METRICS + 
-    BLOOD_PRESSURE_METRICS + 
-    WEIGHT_METRICS + 
-    CALORIES_METRICS + 
-    EVENT_METRICS
+    SLEEP_METRICS
+    + ACTIVITY_METRICS
+    + MOOD_METRICS
+    + HEART_RATE_METRICS
+    + BLOOD_PRESSURE_METRICS
+    + WEIGHT_METRICS
+    + CALORIES_METRICS
+    + EVENT_METRICS
 )
 
 # Test protocol data - these match the IDs in the migration
@@ -359,7 +362,7 @@ TEST_PROTOCOLS = [
         "target_metrics": ["sleep"],
         "duration_type": "fixed",
         "duration_days": 30,
-        "template_id": "sleep-optimization"
+        "template_id": "sleep-optimization",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d480",  # Daily 10,000 Steps Challenge
@@ -368,7 +371,7 @@ TEST_PROTOCOLS = [
         "target_metrics": ["activity"],
         "duration_type": "fixed",
         "duration_days": 21,
-        "template_id": "daily-10k-steps"
+        "template_id": "daily-10k-steps",
     },
     {
         "id": "f47ac10b-58cc-4372-a567-0e02b2c3d481",  # Intermittent Fasting
@@ -377,8 +380,8 @@ TEST_PROTOCOLS = [
         "target_metrics": ["weight", "calories", "heart_rate"],
         "duration_type": "ongoing",
         "duration_days": 30,
-        "template_id": "intermittent-fasting-16-8"
-    }
+        "template_id": "intermittent-fasting-16-8",
+    },
 ]
 
 # Test check-in data for different protocol types
@@ -391,9 +394,9 @@ SLEEP_CHECK_INS = [
             "deep_sleep_hours": 1.8,
             "rem_sleep_hours": 2.2,
             "sleep_score": 85,
-            "adherence": 9
+            "adherence": 9,
         },
-        "status": "completed"
+        "status": "completed",
     },
     {
         "notes": "Struggled with the evening routine, but still managed to get decent sleep.",
@@ -403,9 +406,9 @@ SLEEP_CHECK_INS = [
             "deep_sleep_hours": 1.2,
             "rem_sleep_hours": 1.5,
             "sleep_score": 70,
-            "adherence": 7
+            "adherence": 7,
         },
-        "status": "completed"
+        "status": "completed",
     },
     {
         "notes": "Best sleep in weeks! Kept the room cool and dark, and followed the full routine.",
@@ -415,86 +418,53 @@ SLEEP_CHECK_INS = [
             "deep_sleep_hours": 2.1,
             "rem_sleep_hours": 2.5,
             "sleep_score": 92,
-            "adherence": 10
+            "adherence": 10,
         },
-        "status": "completed"
-    }
+        "status": "completed",
+    },
 ]
 
 ACTIVITY_CHECK_INS = [
     {
         "notes": "Reached my step goal today! Took a long walk during lunch break.",
-        "metrics": {
-            "steps": 10500,
-            "active_minutes": 65,
-            "energy_level": 8,
-            "adherence": 9
-        },
-        "status": "completed"
+        "metrics": {"steps": 10500, "active_minutes": 65, "energy_level": 8, "adherence": 9},
+        "status": "completed",
     },
     {
         "notes": "Almost reached my step goal. Will try to do better tomorrow.",
-        "metrics": {
-            "steps": 8200,
-            "active_minutes": 45,
-            "energy_level": 7,
-            "adherence": 7
-        },
-        "status": "completed"
+        "metrics": {"steps": 8200, "active_minutes": 45, "energy_level": 7, "adherence": 7},
+        "status": "completed",
     },
     {
         "notes": "Exceeded my step goal! Feeling great and energized.",
-        "metrics": {
-            "steps": 12300,
-            "active_minutes": 85,
-            "energy_level": 9,
-            "adherence": 10
-        },
-        "status": "completed"
-    }
+        "metrics": {"steps": 12300, "active_minutes": 85, "energy_level": 9, "adherence": 10},
+        "status": "completed",
+    },
 ]
 
 FASTING_CHECK_INS = [
     {
         "notes": "Completed 16 hours of fasting. Feeling good and focused.",
-        "metrics": {
-            "fasting_hours": 16.5,
-            "hunger_level": 3,
-            "energy_level": 8,
-            "weight": 72.5,
-            "adherence": 9
-        },
-        "status": "completed"
+        "metrics": {"fasting_hours": 16.5, "hunger_level": 3, "energy_level": 8, "weight": 72.5, "adherence": 9},
+        "status": "completed",
     },
     {
         "notes": "Struggled a bit today but managed to complete the fast.",
-        "metrics": {
-            "fasting_hours": 15,
-            "hunger_level": 6,
-            "energy_level": 6,
-            "weight": 72.3,
-            "adherence": 7
-        },
-        "status": "completed"
+        "metrics": {"fasting_hours": 15, "hunger_level": 6, "energy_level": 6, "weight": 72.3, "adherence": 7},
+        "status": "completed",
     },
     {
         "notes": "Great day! Extended my fast to 18 hours and felt amazing.",
-        "metrics": {
-            "fasting_hours": 18,
-            "hunger_level": 2,
-            "energy_level": 9,
-            "weight": 72.1,
-            "adherence": 10
-        },
-        "status": "completed"
-    }
+        "metrics": {"fasting_hours": 18, "hunger_level": 2, "energy_level": 9, "weight": 72.1, "adherence": 10},
+        "status": "completed",
+    },
 ]
 
 # Map protocol template IDs to check-in data
 PROTOCOL_CHECK_IN_MAP = {
     "sleep-optimization": SLEEP_CHECK_INS,
     "daily-10k-steps": ACTIVITY_CHECK_INS,
-    "intermittent-fasting-16-8": FASTING_CHECK_INS
+    "intermittent-fasting-16-8": FASTING_CHECK_INS,
 }
 
 # Global variables to store created resources
@@ -631,14 +601,14 @@ def create_health_metrics():
 
     # Combine all metrics
     all_metrics = (
-        sleep_metrics +
-        activity_metrics +
-        mood_metrics +
-        heart_rate_metrics +
-        blood_pressure_metrics +
-        weight_metrics +
-        calories_metrics +
-        event_metrics
+        sleep_metrics
+        + activity_metrics
+        + mood_metrics
+        + heart_rate_metrics
+        + blood_pressure_metrics
+        + weight_metrics
+        + calories_metrics
+        + event_metrics
     )
 
     # Sort metrics by date
@@ -730,29 +700,22 @@ def enroll_in_protocols():
     for i, protocol_id in enumerate(PROTOCOL_IDS):
         # Get the corresponding protocol details from TEST_PROTOCOLS
         protocol_details = TEST_PROTOCOLS[i]
-        
+
         # Format the date as YYYY-MM-DD for the API
         today = datetime.now().date().isoformat()
-        
+
         # Calculate end date if it's a fixed duration protocol
         end_date = None
         if protocol_details["duration_type"] == "fixed" and protocol_details["duration_days"]:
             end_date = (datetime.now() + timedelta(days=protocol_details["duration_days"])).date().isoformat()
-        
+
         # Create enrollment data with comprehensive details
-        enrollment_data = {
-            "protocol_id": protocol_id,
-            "start_date": today
-        }
-        
+        enrollment_data = {"protocol_id": protocol_id, "start_date": today}
+
         print(f"Enrolling in protocol: {protocol_details['name']} (ID: {protocol_id})")
-        
-        response = requests.post(
-            f"{BASE_URL}/user-protocols/enroll", 
-            json=enrollment_data, 
-            headers=headers
-        )
-        
+
+        response = requests.post(f"{BASE_URL}/user-protocols/enroll", json=enrollment_data, headers=headers)
+
         if response.status_code == 200:
             user_protocol_data = response.json()
             USER_PROTOCOL_IDS.append(user_protocol_data["id"])
@@ -760,10 +723,10 @@ def enroll_in_protocols():
             print(f"User Protocol ID: {user_protocol_data['id']}")
         else:
             print(f"Failed to enroll in protocol: {response.text}")
-    
+
     # Create some check-ins for the protocols
     create_protocol_check_ins()
-    
+
     print(f"Enrolled in {len(USER_PROTOCOL_IDS)} protocols")
     return True
 
@@ -781,7 +744,7 @@ def create_protocol_check_ins():
 
     # Get protocol details for each user protocol
     check_in_count = 0
-    
+
     # Create a mapping of user protocol IDs to their original protocol IDs
     user_protocol_to_template = {}
     for i, user_protocol_id in enumerate(USER_PROTOCOL_IDS):
@@ -789,7 +752,7 @@ def create_protocol_check_ins():
             template_id = TEST_PROTOCOLS[i]["template_id"] if "template_id" in TEST_PROTOCOLS[i] else None
             if template_id:
                 user_protocol_to_template[user_protocol_id] = template_id
-    
+
     # Create check-ins for each protocol
     for user_protocol_id in USER_PROTOCOL_IDS:
         # Determine which check-in template to use based on protocol type
@@ -798,10 +761,10 @@ def create_protocol_check_ins():
             if i < len(USER_PROTOCOL_IDS) and USER_PROTOCOL_IDS[i] == user_protocol_id:
                 template_id = protocol.get("template_id")
                 break
-        
+
         # Default to sleep check-ins if we can't determine the protocol type
         check_in_templates = SLEEP_CHECK_INS
-        
+
         # Use the appropriate check-in template based on protocol type
         if template_id == "sleep-optimization":
             check_in_templates = SLEEP_CHECK_INS
@@ -809,24 +772,20 @@ def create_protocol_check_ins():
             check_in_templates = ACTIVITY_CHECK_INS
         elif template_id == "intermittent-fasting-16-8":
             check_in_templates = FASTING_CHECK_INS
-        
+
         # Create 3-5 check-ins per protocol
         num_check_ins = random.randint(3, 5)
         for i in range(num_check_ins):
             # Select a random check-in template for this protocol type
             check_in = random.choice(check_in_templates)
-            
+
             # Add a date (between 1-14 days ago) in YYYY-MM-DD format
             days_ago = random.randint(1, 14)
             check_in_date = (datetime.now() - timedelta(days=days_ago)).date().isoformat()
             check_in_data = {**check_in, "date": check_in_date}
-            
-            response = requests.post(
-                f"{BASE_URL}/protocols/{user_protocol_id}/check-ins", 
-                json=check_in_data, 
-                headers=headers
-            )
-            
+
+            response = requests.post(f"{BASE_URL}/protocols/{user_protocol_id}/check-ins", json=check_in_data, headers=headers)
+
             if response.status_code == 200:
                 check_in_count += 1
                 print(f"Created check-in for protocol {user_protocol_id} from {days_ago} days ago")

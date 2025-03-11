@@ -52,12 +52,12 @@ async def get_health_insight(
 
     try:
         result = await generate_health_insight(
-            db=db, 
-            user_id=user_id, 
-            query=request.query, 
-            metric_types=request.metric_types, 
+            db=db,
+            user_id=user_id,
+            query=request.query,
+            metric_types=request.metric_types,
             update_memory=request.update_memory,
-            time_frame=request.time_frame
+            time_frame=request.time_frame,
         )
         return result
     except Exception as e:
@@ -115,11 +115,7 @@ async def get_trend_analysis(
 
     try:
         result = await analyze_health_trends(
-            db=db, 
-            user_id=user_id, 
-            metric_type=request.metric_type, 
-            time_period=request.time_period,
-            use_cache=request.use_cache
+            db=db, user_id=user_id, metric_type=request.metric_type, time_period=request.time_period, use_cache=request.use_cache
         )
         return result
     except Exception as e:
