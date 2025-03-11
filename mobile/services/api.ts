@@ -550,11 +550,15 @@ export async function getProtocols(): Promise<Protocol[]> {
   }
 }
 
-export async function getUserProtocols(): Promise<UserProtocolWithProtocol[]> {
-  console.log('Fetching user protocols');
+export async function getUserProtocols(status?: string): Promise<UserProtocolWithProtocol[]> {
+  console.log('Fetching user protocols', status ? `with status: ${status}` : '');
   try {
+    const endpoint = status 
+      ? `/api/v1/user-protocols?skip=0&limit=100&status=${status}`
+      : '/api/v1/user-protocols?skip=0&limit=100';
+      
     const protocols = await authenticatedRequest<UserProtocolWithProtocol[]>(
-      '/api/v1/user-protocols?skip=0&limit=100',
+      endpoint,
       'GET',
       undefined,
       true // Force refresh token

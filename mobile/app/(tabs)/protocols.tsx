@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Dimensions, Text, Platform } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
@@ -14,12 +14,17 @@ import { Protocol, UserProtocol, UserProtocolWithProtocol } from '@/services/api
 
 export default function ProtocolsScreen() {
   const { user } = useAuth();
+  const params = useLocalSearchParams();
+  const tabParam = params.tab as string;
+  
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [userProtocols, setUserProtocols] = useState<UserProtocolWithProtocol[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'available' | 'enrolled'>('enrolled');
+  const [activeTab, setActiveTab] = useState<'available' | 'enrolled'>(
+    tabParam === 'available' ? 'available' : 'enrolled'
+  );
 
   // Get theme colors
   const primaryColor = useThemeColor({}, 'primary') as string;
@@ -33,17 +38,19 @@ export default function ProtocolsScreen() {
       setError(null);
       setIsLoading(true);
 
-      // Fetch available protocols
-      console.log('Fetching available protocols');
-      const protocolsResponse = await api.getProtocols();
-      setProtocols(protocolsResponse);
-      console.log('Received', protocolsResponse.length, 'available protocols');
-
-      // Fetch user protocols
-      console.log('Fetching user protocols');
-      const userProtocolsResponse = await api.getUserProtocols();
-      setUserProtocols(userProtocolsResponse);
-      console.log('Received', userProtocolsResponse.length, 'user protocols');
+      if (activeTab === 'enrolled') {
+        // Fetch active user protocols
+        console.log('Fetching active user protocols');
+        const userProtocolsResponse = await api.getActiveProtocols();
+        setUserProtocols(userProtocolsResponse);
+        console.log('Received', userProtocolsResponse.length, 'active user protocols');
+      } else {
+        // Fetch available protocols
+        console.log('Fetching available protocols');
+        const protocolsResponse = await api.getProtocols();
+        setProtocols(protocolsResponse);
+        console.log('Received', protocolsResponse.length, 'available protocols');
+      }
 
       setIsLoading(false);
     } catch (err) {
@@ -59,6 +66,11 @@ export default function ProtocolsScreen() {
       setIsLoading(false);
     }
   };
+
+  // Load data when tab changes
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
 
   // Load data on mount
   useEffect(() => {
@@ -93,6 +105,14 @@ export default function ProtocolsScreen() {
   // Check if user is enrolled in a protocol
   const isEnrolled = (protocolId: string) => {
     return userProtocols.some(up => up.protocol?.id === protocolId);
+  };
+
+  // Function to handle tab change
+  const handleTabChange = (tab: 'available' | 'enrolled') => {
+    if (tab !== activeTab) {
+      setActiveTab(tab);
+      // Loading will be triggered by the useEffect that watches activeTab
+    }
   };
 
   // Render available protocols
@@ -164,7 +184,7 @@ export default function ProtocolsScreen() {
               }
             >
               <ThemedText variant="bodySmall" secondary numberOfLines={2} style={styles.protocolDescription}>
-                {protocol.description}
+                {protocol.description || 'No description available'}
               </ThemedText>
             </Card>
           );
@@ -251,28 +271,9 @@ export default function ProtocolsScreen() {
                 </View>
               }
             >
-              {protocol.duration_days && protocol.duration_days > 0 && (
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
-                    <View 
-                      style={[
-                        styles.progressFill, 
-                        { width: `${progress * 100}%` },
-                        userProtocol.status === 'completed' && styles.progressCompleted
-                      ]} 
-                    />
-                  </View>
-                  <ThemedText variant="bodySmall" secondary>
-                    {userProtocol.status === 'completed' 
-                      ? 'Completed' 
-                      : userProtocol.status === 'cancelled'
-                        ? 'Cancelled'
-                        : userProtocol.status === 'paused'
-                          ? 'Paused'
-                          : `${daysLeft} days left`}
-                  </ThemedText>
-                </View>
-              )}
+              <ThemedText variant="bodySmall" secondary numberOfLines={2} style={styles.protocolDescription}>
+                {protocol.description || 'No description available'}
+              </ThemedText>
             </Card>
           );
         })}
@@ -280,7 +281,48 @@ export default function ProtocolsScreen() {
     );
   };
 
-  // Update the main UI structure
+  // Render tab buttons
+  const renderTabs = () => (
+    <View style={styles.tabContainer}>
+      <TouchableOpacity
+        style={[
+          styles.tabButton,
+          activeTab === 'enrolled' && styles.activeTabButton,
+          { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
+        ]}
+        onPress={() => handleTabChange('enrolled')}
+      >
+        <ThemedText
+          variant="labelMedium"
+          style={[
+            styles.tabButtonText,
+            activeTab === 'enrolled' && styles.activeTabButtonText,
+          ]}
+        >
+          My Protocols
+        </ThemedText>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.tabButton,
+          activeTab === 'available' && styles.activeTabButton,
+          { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
+        ]}
+        onPress={() => handleTabChange('available')}
+      >
+        <ThemedText
+          variant="labelMedium"
+          style={[
+            styles.tabButtonText,
+            activeTab === 'available' && styles.activeTabButtonText,
+          ]}
+        >
+          Available
+        </ThemedText>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -299,46 +341,9 @@ export default function ProtocolsScreen() {
           Protocols
         </ThemedText>
         
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === 'enrolled' && styles.activeTabButton,
-              { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
-            ]}
-            onPress={() => setActiveTab('enrolled')}
-          >
-            <ThemedText
-              variant="labelMedium"
-              style={[
-                styles.tabButtonText,
-                activeTab === 'enrolled' && styles.activeTabButtonText,
-              ]}
-            >
-              My Protocols
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === 'available' && styles.activeTabButton,
-              { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
-            ]}
-            onPress={() => setActiveTab('available')}
-          >
-            <ThemedText
-              variant="labelMedium"
-              style={[
-                styles.tabButtonText,
-                activeTab === 'available' && styles.activeTabButtonText,
-              ]}
-            >
-              Available
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+        {renderTabs()}
 
-        {isLoading ? (
+        {isLoading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={primaryColor} />
             <ThemedText variant="bodyMedium" style={styles.loadingText}>
@@ -350,9 +355,9 @@ export default function ProtocolsScreen() {
             <ThemedText variant="bodyMedium" style={styles.errorText}>
               {error}
             </ThemedText>
-            <Button 
+            <Button
               title="Retry" 
-              onPress={loadData} 
+              onPress={loadData}
               variant="primary"
               size="sm"
               leftIcon="refresh"
@@ -376,15 +381,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: spacing.xl * 2,
   },
   title: {
     marginBottom: spacing.md,
-    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
+    marginTop: Platform.OS === 'ios' ? spacing.xl : spacing.md,
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
@@ -433,20 +438,9 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: spacing.sm,
   },
-  emptyCard: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  browseButton: {
-    marginTop: spacing.sm,
-  },
   protocolsContainer: {
-    marginBottom: spacing.lg,
+    flexDirection: 'column',
+    gap: spacing.md,
   },
   protocolCard: {
     marginBottom: spacing.md,
@@ -458,43 +452,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: spacing.sm,
   },
   targetMetrics: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: spacing.xs,
   },
   metricIconContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     alignItems: 'center',
-    marginRight: 8,
+    justifyContent: 'center',
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
   },
   statusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  progressContainer: {
-    marginBottom: 12,
+  emptyCard: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  progressBar: {
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 4,
+  emptyText: {
+    marginBottom: spacing.md,
+    textAlign: 'center',
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 6,
-    backgroundColor: '#0a7ea4',
-  },
-  progressCompleted: {
-    backgroundColor: '#34C759',
-  },
+  browseButton: {
+    marginTop: spacing.sm,
+  }
 }); 

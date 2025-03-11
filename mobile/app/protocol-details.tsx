@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, View, Platform } from 'react-native';
+import { StyleSheet, ActivityIndicator, ScrollView, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,12 +50,15 @@ export default function ProtocolDetailsScreen() {
   console.log('Rendering ProtocolDetailsScreen');
   const params = useLocalSearchParams();
   const id = params.id as string;
+  const type = params.type as string;
   
   console.log('Protocol ID from params:', id);
   
-  const [userProtocol, setUserProtocol] = useState<UserProtocolWithProtocol | null>(null);
+  const [userProtocol, setUserProtocol] = useState<api.UserProtocolWithProtocol | null>(null);
+  const [progress, setProgress] = useState<api.UserProtocolProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Get theme colors
   const primaryColor = useThemeColor({}, 'primary') as string;
@@ -321,11 +324,50 @@ export default function ProtocolDetailsScreen() {
           return;
         }
 
-        // Fetch user protocol details
-        console.log('Fetching user protocol details with ID:', id);
-        const protocolDetails = await api.getUserProtocolDetails(id);
-        console.log('Received protocol details:', JSON.stringify(protocolDetails, null, 2));
-        setUserProtocol(protocolDetails);
+        // Check if this is a user protocol or an available protocol
+        if (type === 'user') {
+          // Fetch user protocol details
+          console.log('Fetching user protocol details with ID:', id);
+          const protocolDetails = await api.getUserProtocolDetails(id);
+          console.log('Received user protocol details:', JSON.stringify(protocolDetails, null, 2));
+          setUserProtocol(protocolDetails);
+          
+          // Also fetch progress data
+          try {
+            const progressData = await api.getUserProtocolProgress(id);
+            setProgress(progressData);
+          } catch (progressErr) {
+            console.error('Error loading protocol progress:', progressErr);
+            // Non-critical error, don't show to user
+          }
+        } else {
+          // Fetch available protocol details
+          console.log('Fetching available protocol details with ID:', id);
+          const protocolDetails = await api.getProtocolDetails(id);
+          console.log('Received available protocol details:', JSON.stringify(protocolDetails, null, 2));
+          
+          // Create a user protocol object from the available protocol
+          const userProtocolFromAvailable: api.UserProtocolWithProtocol = {
+            id: '', // Will be assigned when enrolled
+            user_id: '',
+            name: protocolDetails.name,
+            description: protocolDetails.description,
+            start_date: new Date().toISOString().split('T')[0], // Today
+            status: 'not_enrolled',
+            target_metrics: protocolDetails.target_metrics,
+            custom_fields: {},
+            steps: protocolDetails.steps || [],
+            recommendations: protocolDetails.recommendations || [],
+            expected_outcomes: protocolDetails.expected_outcomes || [],
+            category: protocolDetails.category,
+            created_at: '',
+            updated_at: '',
+            protocol: protocolDetails
+          };
+          
+          setUserProtocol(userProtocolFromAvailable);
+        }
+        
         setIsLoading(false);
       } catch (err) {
         console.error('Error loading protocol details:', err);
@@ -335,7 +377,25 @@ export default function ProtocolDetailsScreen() {
     };
 
     loadProtocolDetails();
-  }, [id]);
+  }, [id, type]);
+
+  // Handle enrollment in protocol
+  const handleEnrollment = async () => {
+    if (!userProtocol || !userProtocol.protocol) return;
+    
+    try {
+      setIsUpdatingStatus(true);
+      await api.enrollInProtocol(userProtocol.protocol.id);
+      
+      // Navigate back to protocols page with enrolled tab active
+      router.replace('/(tabs)/protocols?tab=enrolled');
+    } catch (err) {
+      console.error('Error enrolling in protocol:', err);
+      setError('Failed to enroll in protocol. Please try again.');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   // Handle back button press
   const handleBack = () => {

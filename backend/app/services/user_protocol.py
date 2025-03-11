@@ -170,9 +170,12 @@ def get_user_protocol_progress(db: Session, user_protocol_id: UUID) -> Dict[str,
     progress = {}
 
     # Calculate days elapsed
-    start_date = db_obj.start_date
+    start_date = db_obj.start_date.date() if db_obj.start_date else None
     today = date.today()
-    days_elapsed = (today - start_date).days
+    
+    days_elapsed = 0
+    if start_date:
+        days_elapsed = (today - start_date).days
 
     # Calculate completion percentage for fixed duration protocols
     completion_percentage = None
@@ -345,20 +348,20 @@ def calculate_end_date(protocol: ProtocolCreate, template_details: Optional[Dict
     return None
 
 
-def get_user_protocol(db: Session, protocol_id: str) -> Optional[UserProtocol]:
+def get_user_protocol(db: Session, user_protocol_id: str) -> Optional[UserProtocol]:
     """
     Get a specific protocol by ID.
 
     Args:
         db: Database session
-        protocol_id: ID of the protocol
+        user_protocol_id: ID of the user protocol
 
     Returns:
         UserProtocol object or None if not found
     """
     # Convert string ID to UUID if needed
-    protocol_id_uuid = UUID(protocol_id) if isinstance(protocol_id, str) else protocol_id
-    return db.query(UserProtocol).filter(UserProtocol.id == protocol_id_uuid).first()
+    user_protocol_id = UUID(user_protocol_id) if isinstance(user_protocol_id, str) else user_protocol_id
+    return db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
 
 
 def update_user_protocol(db: Session, protocol_id: str, protocol_update: ProtocolUpdate) -> Optional[UserProtocol]:

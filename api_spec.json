@@ -3109,15 +3109,13 @@
       },
       "ProtocolResponse": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Name"
           },
           "description": {
@@ -3167,29 +3165,11 @@
             "title": "Duration Days"
           },
           "target_metrics": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
             "title": "Target Metrics"
-          },
-          "custom_fields": {
-            "anyOf": [
-              {
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Custom Fields"
           },
           "steps": {
             "anyOf": [
@@ -3244,16 +3224,6 @@
             ],
             "title": "Category"
           },
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id"
-          },
           "status": {
             "type": "string",
             "title": "Status"
@@ -3278,15 +3248,22 @@
             "type": "string",
             "format": "date-time",
             "title": "Updated At"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "user_id",
+          "name",
+          "target_metrics",
           "status",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "user_id"
         ],
         "title": "ProtocolResponse",
         "description": "Schema for protocol response"
