@@ -6,7 +6,7 @@ from app.api.endpoints.auth import get_current_active_user
 from app.db.session import get_db
 from app.models.health_metric import HealthMetric
 from app.schemas.health_metric import HealthMetric as HealthMetricSchema
-from app.schemas.health_metric import HealthMetricCreate, HealthMetricSimilaritySearch, HealthMetricUpdate
+from app.schemas.health_metric import HealthMetricCreate, HealthMetricSimilaritySearch, HealthMetricUpdate, MetricType
 from app.schemas.user import User as UserSchema
 from app.services.health_metrics import (
     create_health_metric,
@@ -50,7 +50,7 @@ router = APIRouter()
                 "application/json": {
                     "example": {
                         "detail": {
-                            "errors": ["Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood"]
+                            "errors": ["Invalid metric type. Valid types are: sleep, activity, heart_rate, blood_pressure, weight, mood, calories, event"]
                         }
                     }
                 }
@@ -156,7 +156,7 @@ def read_user_metrics(
     user_id: UUID,
     skip: int = Query(0, description="Number of records to skip for pagination"),
     limit: int = Query(100, description="Maximum number of records to return"),
-    metric_type: Optional[str] = Query(None, description="Filter by metric type (e.g., sleep, activity)"),
+    metric_type: Optional[MetricType] = Query(None, description="Filter by metric type (e.g., sleep, activity)"),
     start_date: Optional[date] = Query(None, description="Filter by start date (inclusive)"),
     end_date: Optional[date] = Query(None, description="Filter by end date (inclusive)"),
     current_user: UserSchema = Depends(get_current_active_user)
@@ -252,18 +252,12 @@ def search_similar_metrics(
     current_user: UserSchema = Depends(get_current_active_user)
 ) -> Any:
     """
-    Search for health metrics similar to the query using vector similarity.
+    Search for health metrics similar to a query.
 
-    This endpoint uses semantic search to find health metrics that are conceptually similar to the
-    provided query. The query is converted to a vector embedding and compared to the embeddings of
-    stored health metrics using cosine similarity.
+    This endpoint uses vector similarity search to find health metrics that are semantically similar
+    to the provided query. The search can be filtered by metric type and similarity threshold.
 
-    - **query**: Text query to search for (e.g., "deep sleep", "high activity")
-    - **metric_type**: Optional filter by metric type
-    - **limit**: Maximum number of results to return
-    - **min_similarity**: Minimum similarity threshold (0-1)
-
-    Only authenticated users can search health metrics, and they can only search their own metrics.
+    Only authenticated users can search for health metrics, and they can only search their own metrics.
     """
     # Ensure the user can only search their own metrics
     if user_id != current_user.id:
@@ -272,7 +266,7 @@ def search_similar_metrics(
     # Generate embedding for the query
     query_embedding = generate_embedding(search_params.query)
 
-    # Find similar metrics
+    # Find similar health metrics
     similar_metrics = find_similar_health_metrics(
         db=db,
         user_id=user_id,
@@ -281,6 +275,10 @@ def search_similar_metrics(
         limit=search_params.limit,
         min_similarity=search_params.min_similarity,
     )
+
+    # Decrypt sensitive data for all metrics
+    for metric in similar_metrics:
+        metric.value = decrypt_json(db, metric.value)
 
     return similar_metrics
 
@@ -310,27 +308,18 @@ def get_metrics_stats(
     *,
     db: Session = Depends(get_db),
     user_id: UUID,
-    metric_type: str,
+    metric_type: MetricType,
     start_date: Optional[date] = Query(None, description="Filter by start date (inclusive)"),
     end_date: Optional[date] = Query(None, description="Filter by end date (inclusive)"),
     current_user: UserSchema = Depends(get_current_active_user)
 ) -> Any:
     """
-    Get statistics for a specific health metric type over a time period.
+    Get statistics for a specific health metric type.
 
-    This endpoint calculates various statistics for a specific health metric type, such as average,
-    minimum, and maximum values. The statistics are calculated based on the metrics within the
-    specified date range.
+    Calculates statistics for a specific health metric type, such as average, min, and max values
+    for each field. The statistics can be filtered by date range.
 
-    The response structure varies based on the metric type:
-    - **sleep**: Sleep duration and sleep score statistics
-    - **activity**: Steps, active calories, and active minutes statistics
-    - **heart_rate**: Average BPM and resting BPM statistics
-    - **weight**: Weight value statistics
-    - **blood_pressure**: Systolic and diastolic pressure statistics
-    - **mood**: Mood rating statistics
-
-    Only authenticated users can access health metrics statistics, and they can only access their own statistics.
+    Only authenticated users can access health metrics statistics, and they can only access their own metrics.
     """
     # Ensure the user can only access their own metrics
     if user_id != current_user.id:

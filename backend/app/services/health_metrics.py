@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from app.models.health_metric import HealthMetric
-from app.schemas.health_metric import HealthMetricCreate, HealthMetricUpdate
+from app.schemas.health_metric import HealthMetricCreate, HealthMetricUpdate, MetricType
 from app.utils.embeddings import generate_health_metric_embedding
 from app.utils.encryption import decrypt_json, encrypt_json
 from app.utils.transformers import transform_health_data

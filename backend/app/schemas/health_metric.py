@@ -1,14 +1,26 @@
 from datetime import date
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
 
+class MetricType(str, Enum):
+    SLEEP = "sleep"
+    ACTIVITY = "activity"
+    HEART_RATE = "heart_rate"
+    BLOOD_PRESSURE = "blood_pressure"
+    WEIGHT = "weight"
+    MOOD = "mood"
+    CALORIES = "calories"
+    EVENT = "event"
+
+
 # Shared properties
 class HealthMetricBase(BaseModel):
     date: date
-    metric_type: str
+    metric_type: MetricType
     value: Dict[str, Any]
     source: str
 
@@ -21,7 +33,7 @@ class HealthMetricCreate(HealthMetricBase):
 # Properties to receive via API on update
 class HealthMetricUpdate(BaseModel):
     date: Optional[date] = None
-    metric_type: Optional[str] = None
+    metric_type: Optional[MetricType] = None
     value: Optional[Dict[str, Any]] = None
     source: Optional[str] = None
 
@@ -43,6 +55,6 @@ class HealthMetric(HealthMetricInDBBase):
 # Schema for vector similarity search
 class HealthMetricSimilaritySearch(BaseModel):
     query: str
-    metric_type: Optional[str] = None
+    metric_type: Optional[MetricType] = None
     limit: int = 10
     min_similarity: float = 0.7

@@ -359,8 +359,19 @@ export async function getHealthMetrics(startDate?: string, endDate?: string): Pr
   }
 }
 
+export enum MetricType {
+  SLEEP = "sleep",
+  ACTIVITY = "activity",
+  HEART_RATE = "heart_rate",
+  BLOOD_PRESSURE = "blood_pressure",
+  WEIGHT = "weight",
+  MOOD = "mood",
+  CALORIES = "calories",
+  EVENT = "event"
+}
+
 export interface HealthMetricInput {
-  metric_type: string;
+  metric_type: MetricType;
   value: any;
   source: string;
   date: string;

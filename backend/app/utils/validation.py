@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from app.schemas.health_metric import MetricType
+
 # Define valid metric types and their required fields
 VALID_METRIC_TYPES = {
     "sleep": {
@@ -75,15 +77,64 @@ VALID_METRIC_TYPES = {
     },
     "weight": {
         "required_fields": ["value"],
-        "optional_fields": ["body_fat_percentage", "muscle_mass", "bmi"],
-        "field_types": {"value": float, "body_fat_percentage": float, "muscle_mass": float, "bmi": float},
-        "field_ranges": {"value": (20, 500), "body_fat_percentage": (1, 60), "muscle_mass": (10, 200), "bmi": (10, 60)},
+        "optional_fields": ["body_fat_percentage", "muscle_mass", "bmi", "lean_mass", "water_percentage", "bone_mass"],
+        "field_types": {
+            "value": float, 
+            "body_fat_percentage": float, 
+            "muscle_mass": float, 
+            "bmi": float,
+            "lean_mass": float,
+            "water_percentage": float,
+            "bone_mass": float
+        },
+        "field_ranges": {
+            "value": (20, 500), 
+            "body_fat_percentage": (1, 60), 
+            "muscle_mass": (10, 200), 
+            "bmi": (10, 60),
+            "lean_mass": (10, 200),
+            "water_percentage": (1, 80),
+            "bone_mass": (0.5, 10)
+        },
     },
     "mood": {
         "required_fields": ["rating"],
         "optional_fields": ["notes", "energy_level", "stress_level"],
         "field_types": {"rating": int, "energy_level": int, "stress_level": int, "notes": str},
         "field_ranges": {"rating": (1, 10), "energy_level": (1, 10), "stress_level": (1, 10)},
+    },
+    "calories": {
+        "required_fields": ["total"],
+        "optional_fields": ["protein", "fat", "carbs", "meal_type", "meal_name", "notes"],
+        "field_types": {
+            "total": int,
+            "protein": float,
+            "fat": float,
+            "carbs": float,
+            "meal_type": str,
+            "meal_name": str,
+            "notes": str
+        },
+        "field_ranges": {
+            "total": (0, 5000),
+            "protein": (0, 500),
+            "fat": (0, 500),
+            "carbs": (0, 500)
+        },
+    },
+    "event": {
+        "required_fields": ["event_type"],
+        "optional_fields": ["notes", "duration_minutes", "intensity"],
+        "field_types": {
+            "event_type": str,
+            "notes": str,
+            "duration_minutes": int,
+            "intensity": int
+        },
+        "field_ranges": {
+            "duration_minutes": (0, 1440),
+            "intensity": (1, 10)
+        },
     },
 }
 
@@ -101,10 +152,13 @@ def validate_metric_type(metric_type: str) -> Tuple[bool, Optional[str]]:
     Returns:
         Tuple of (is_valid, error_message)
     """
-    if metric_type not in VALID_METRIC_TYPES:
-        valid_types = ", ".join(VALID_METRIC_TYPES.keys())
+    try:
+        # Try to convert the string to an enum value
+        MetricType(metric_type)
+        return True, None
+    except ValueError:
+        valid_types = ", ".join([t.value for t in MetricType])
         return False, f"Invalid metric type. Valid types are: {valid_types}"
-    return True, None
 
 
 def validate_source(source: str) -> Tuple[bool, Optional[str]]:
@@ -249,18 +303,19 @@ def validate_health_metric(metric_type: str, value: Dict[str, Any], source: str)
             if not is_valid:
                 errors.append(error)
                 continue
-
-            # Validate field range for numeric types
-            if field in metric_def["field_ranges"] and expected_type in (int, float):
-                min_value, max_value = metric_def["field_ranges"][field]
-                is_valid, error = validate_field_range(field, sanitized_field_value, min_value, max_value)
-                if not is_valid:
-                    errors.append(error)
-                    continue
-
             sanitized_value[field] = sanitized_field_value
         else:
-            # If no type is specified, keep the original value
+            # If no type validation is defined, keep the original value
             sanitized_value[field] = field_value
 
-    return len(errors) == 0, errors, sanitized_value
+        # Validate field range if applicable
+        if isinstance(sanitized_value[field], (int, float)) and field in metric_def.get("field_ranges", {}):
+            min_value, max_value = metric_def["field_ranges"][field]
+            is_valid, error = validate_field_range(field, sanitized_value[field], min_value, max_value)
+            if not is_valid:
+                errors.append(error)
+
+    # Return validation result
+    if errors:
+        return False, errors, {}
+    return True, [], sanitized_value

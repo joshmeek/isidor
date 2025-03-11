@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
+import { MetricType } from '@/services/api';
 import { spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -469,6 +470,7 @@ export default function HomeScreen() {
             style={[
               styles.periodButton,
               trendTimePeriod === 'last_day' && styles.activePeriodButton,
+              { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
             ]}
             onPress={() => setTrendTimePeriod('last_day')}
           >
@@ -486,6 +488,7 @@ export default function HomeScreen() {
             style={[
               styles.periodButton,
               trendTimePeriod === 'last_week' && styles.activePeriodButton,
+              { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
             ]}
             onPress={() => setTrendTimePeriod('last_week')}
           >
@@ -501,7 +504,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Render AI Health Insight */}
+        {/* Health Insights */}
         {renderHealthInsight()}
 
         {/* Render Metrics if available */}
@@ -544,7 +547,7 @@ export default function HomeScreen() {
       // Mock health data for testing
       const mockHealthData = [
         {
-          metric_type: 'sleep',
+          metric_type: MetricType.SLEEP,
           value: {
             duration_hours: 7.5,
             sleep_score: 85,
@@ -556,7 +559,7 @@ export default function HomeScreen() {
           user_id: user?.id || ''
         },
         {
-          metric_type: 'activity',
+          metric_type: MetricType.ACTIVITY,
           value: {
             steps: 8500,
             active_calories: 320,
@@ -568,7 +571,7 @@ export default function HomeScreen() {
           user_id: user?.id || ''
         },
         {
-          metric_type: 'heart_rate',
+          metric_type: MetricType.HEART_RATE,
           value: {
             average_bpm: 68,
             resting_bpm: 62,
@@ -875,9 +878,6 @@ export default function HomeScreen() {
           Dashboard
         </ThemedText>
         
-        <ThemedText variant="headingMedium" style={styles.sectionTitle}>
-          Health Trends
-        </ThemedText>
         {renderSummary()}
         
         <ThemedText variant="headingMedium" style={styles.sectionTitle}>
@@ -942,23 +942,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   periodButton: {
     flex: 1,
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderWidth: 0,
   },
   activePeriodButton: {
-    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   periodButtonText: {
     textAlign: 'center',
+    fontWeight: '500',
   },
   activePeriodButtonText: {
     color: '#0066CC',
+    fontWeight: '600',
   },
   metricsGrid: {
     flexDirection: 'row',

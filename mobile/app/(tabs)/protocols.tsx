@@ -305,6 +305,7 @@ export default function ProtocolsScreen() {
             style={[
               styles.tabButton,
               activeTab === 'enrolled' && styles.activeTabButton,
+              { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
             ]}
             onPress={() => setActiveTab('enrolled')}
           >
@@ -322,6 +323,7 @@ export default function ProtocolsScreen() {
             style={[
               styles.tabButton,
               activeTab === 'available' && styles.activeTabButton,
+              { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
             ]}
             onPress={() => setActiveTab('available')}
           >
@@ -386,23 +388,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   tabButton: {
     flex: 1,
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderWidth: 0,
   },
   activeTabButton: {
-    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabButtonText: {
     textAlign: 'center',
+    fontWeight: '500',
   },
   activeTabButtonText: {
     color: '#0066CC',
+    fontWeight: '600',
   },
   loadingContainer: {
     padding: spacing.xl,

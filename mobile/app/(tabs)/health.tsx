@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText, ThemedView, Button, Card, MetricCard, TextInput } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
+import { MetricType } from '@/services/api';
 import { spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
@@ -20,7 +21,7 @@ interface HealthMetric {
 
 // Types for health metric input
 interface HealthMetricInput {
-  metric_type: string;
+  metric_type: MetricType;
   value: any;
   source: string;
   date: string;
@@ -47,7 +48,7 @@ export default function HealthScreen() {
   const successColor = useThemeColor({}, 'success') as string;
   
   // Form state for adding new metrics
-  const [metricType, setMetricType] = useState<'sleep' | 'activity' | 'heart_rate'>('sleep');
+  const [metricType, setMetricType] = useState<MetricType>(MetricType.SLEEP);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
   // Sleep metric values
@@ -65,10 +66,32 @@ export default function HealthScreen() {
   const [restingHr, setRestingHr] = useState('');
   const [hrv, setHrv] = useState('');
 
+  // Weight metric values
+  const [weight, setWeight] = useState('');
+  const [bodyFatPercentage, setBodyFatPercentage] = useState('');
+  const [muscleMass, setMuscleMass] = useState('');
+  const [waterPercentage, setWaterPercentage] = useState('');
+  const [boneMass, setBoneMass] = useState('');
+
+  // Calories metric values
+  const [totalCalories, setTotalCalories] = useState('');
+  const [protein, setProtein] = useState('');
+  const [fat, setFat] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [mealType, setMealType] = useState('');
+  const [mealName, setMealName] = useState('');
+  const [caloriesNotes, setCaloriesNotes] = useState('');
+
+  // Event metric values
+  const [eventType, setEventType] = useState('');
+  const [eventNotes, setEventNotes] = useState('');
+  const [eventDuration, setEventDuration] = useState('');
+  const [eventIntensity, setEventIntensity] = useState('');
+
   // Set active metric type from URL parameter if provided
   useEffect(() => {
-    if (activeMetricTab && ['sleep', 'activity', 'heart_rate'].includes(activeMetricTab)) {
-      setMetricType(activeMetricTab as 'sleep' | 'activity' | 'heart_rate');
+    if (activeMetricTab && Object.values(MetricType).includes(activeMetricTab as MetricType)) {
+      setMetricType(activeMetricTab as MetricType);
     }
   }, [activeMetricTab]);
 
@@ -128,7 +151,7 @@ export default function HealthScreen() {
       
       // Prepare the metric value based on the selected type
       switch (metricType) {
-        case 'sleep':
+        case MetricType.SLEEP:
           if (!sleepDuration) {
             Alert.alert('Error', 'Sleep duration is required');
             setIsLoading(false);
@@ -143,7 +166,7 @@ export default function HealthScreen() {
           };
           break;
           
-        case 'activity':
+        case MetricType.ACTIVITY:
           if (!steps) {
             Alert.alert('Error', 'Steps count is required');
             setIsLoading(false);
@@ -157,7 +180,7 @@ export default function HealthScreen() {
           };
           break;
           
-        case 'heart_rate':
+        case MetricType.HEART_RATE:
           if (!restingHr) {
             Alert.alert('Error', 'Resting heart rate is required');
             setIsLoading(false);
@@ -168,6 +191,55 @@ export default function HealthScreen() {
             average_bpm: parseInt(restingHr),
             resting_bpm: parseInt(restingHr),
             hrv_ms: hrv ? parseFloat(hrv) : 0
+          };
+          break;
+
+        case MetricType.WEIGHT:
+          if (!weight) {
+            Alert.alert('Error', 'Weight is required');
+            setIsLoading(false);
+            return;
+          }
+          
+          metricValue = {
+            value: parseFloat(weight),
+            body_fat_percentage: bodyFatPercentage ? parseFloat(bodyFatPercentage) : null,
+            muscle_mass: muscleMass ? parseFloat(muscleMass) : null,
+            water_percentage: waterPercentage ? parseFloat(waterPercentage) : null,
+            bone_mass: boneMass ? parseFloat(boneMass) : null
+          };
+          break;
+
+        case MetricType.CALORIES:
+          if (!totalCalories) {
+            Alert.alert('Error', 'Total calories is required');
+            setIsLoading(false);
+            return;
+          }
+          
+          metricValue = {
+            total: parseInt(totalCalories),
+            protein: protein ? parseFloat(protein) : null,
+            fat: fat ? parseFloat(fat) : null,
+            carbs: carbs ? parseFloat(carbs) : null,
+            meal_type: mealType || null,
+            meal_name: mealName || null,
+            notes: caloriesNotes || null
+          };
+          break;
+
+        case MetricType.EVENT:
+          if (!eventType) {
+            Alert.alert('Error', 'Event type is required');
+            setIsLoading(false);
+            return;
+          }
+          
+          metricValue = {
+            event_type: eventType,
+            notes: eventNotes || null,
+            duration_minutes: eventDuration ? parseInt(eventDuration) : null,
+            intensity: eventIntensity ? parseInt(eventIntensity) : null
           };
           break;
       }
@@ -217,6 +289,22 @@ export default function HealthScreen() {
     setActiveMinutes('');
     setRestingHr('');
     setHrv('');
+    setWeight('');
+    setBodyFatPercentage('');
+    setMuscleMass('');
+    setWaterPercentage('');
+    setBoneMass('');
+    setTotalCalories('');
+    setProtein('');
+    setFat('');
+    setCarbs('');
+    setMealType('');
+    setMealName('');
+    setCaloriesNotes('');
+    setEventType('');
+    setEventNotes('');
+    setEventDuration('');
+    setEventIntensity('');
   };
 
   // Render the form to add new health metrics
@@ -231,21 +319,21 @@ export default function HealthScreen() {
             <TouchableOpacity
               style={[
                 styles.metricTypeButton,
-                metricType === 'sleep' && styles.metricTypeButtonActive,
+                metricType === MetricType.SLEEP && styles.metricTypeButtonActive,
               ]}
-              onPress={() => setMetricType('sleep')}
+              onPress={() => setMetricType(MetricType.SLEEP)}
             >
               <Ionicons 
                 name="moon" 
                 size={24} 
-                color={metricType === 'sleep' ? '#fff' : '#5E5CE6'} 
+                color={metricType === MetricType.SLEEP ? '#fff' : '#5E5CE6'} 
               />
               <ThemedText
                 variant="labelMedium"
                 style={[
                   styles.metricTypeButtonText,
-                  metricType === 'sleep' && styles.metricTypeButtonTextActive,
-                  { color: metricType === 'sleep' ? '#fff' : '#5E5CE6' }
+                  metricType === MetricType.SLEEP && styles.metricTypeButtonTextActive,
+                  { color: metricType === MetricType.SLEEP ? '#fff' : '#5E5CE6' }
                 ]}
               >
                 Sleep
@@ -255,22 +343,22 @@ export default function HealthScreen() {
             <TouchableOpacity
               style={[
                 styles.metricTypeButton,
-                metricType === 'activity' && styles.metricTypeButtonActive,
+                metricType === MetricType.ACTIVITY && styles.metricTypeButtonActive,
                 { borderColor: '#FF9500' }
               ]}
-              onPress={() => setMetricType('activity')}
+              onPress={() => setMetricType(MetricType.ACTIVITY)}
             >
               <Ionicons 
                 name="footsteps" 
                 size={24} 
-                color={metricType === 'activity' ? '#fff' : '#FF9500'} 
+                color={metricType === MetricType.ACTIVITY ? '#fff' : '#FF9500'} 
               />
               <ThemedText
                 variant="labelMedium"
                 style={[
                   styles.metricTypeButtonText,
-                  metricType === 'activity' && styles.metricTypeButtonTextActive,
-                  { color: metricType === 'activity' ? '#fff' : '#FF9500' }
+                  metricType === MetricType.ACTIVITY && styles.metricTypeButtonTextActive,
+                  { color: metricType === MetricType.ACTIVITY ? '#fff' : '#FF9500' }
                 ]}
               >
                 Activity
@@ -280,25 +368,102 @@ export default function HealthScreen() {
             <TouchableOpacity
               style={[
                 styles.metricTypeButton,
-                metricType === 'heart_rate' && styles.metricTypeButtonActive,
+                metricType === MetricType.HEART_RATE && styles.metricTypeButtonActive,
                 { borderColor: '#FF2D55' }
               ]}
-              onPress={() => setMetricType('heart_rate')}
+              onPress={() => setMetricType(MetricType.HEART_RATE)}
             >
               <Ionicons 
                 name="heart" 
                 size={24} 
-                color={metricType === 'heart_rate' ? '#fff' : '#FF2D55'} 
+                color={metricType === MetricType.HEART_RATE ? '#fff' : '#FF2D55'} 
               />
               <ThemedText
                 variant="labelMedium"
                 style={[
                   styles.metricTypeButtonText,
-                  metricType === 'heart_rate' && styles.metricTypeButtonTextActive,
-                  { color: metricType === 'heart_rate' ? '#fff' : '#FF2D55' }
+                  metricType === MetricType.HEART_RATE && styles.metricTypeButtonTextActive,
+                  { color: metricType === MetricType.HEART_RATE ? '#fff' : '#FF2D55' }
                 ]}
               >
                 Heart Rate
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.metricTypeSelector}>
+            <TouchableOpacity
+              style={[
+                styles.metricTypeButton,
+                metricType === MetricType.WEIGHT && styles.metricTypeButtonActive,
+                { borderColor: '#AF52DE' }
+              ]}
+              onPress={() => setMetricType(MetricType.WEIGHT)}
+            >
+              <Ionicons 
+                name="fitness" 
+                size={24} 
+                color={metricType === MetricType.WEIGHT ? '#fff' : '#AF52DE'} 
+              />
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.metricTypeButtonText,
+                  metricType === MetricType.WEIGHT && styles.metricTypeButtonTextActive,
+                  { color: metricType === MetricType.WEIGHT ? '#fff' : '#AF52DE' }
+                ]}
+              >
+                Weight
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.metricTypeButton,
+                metricType === MetricType.CALORIES && styles.metricTypeButtonActive,
+                { borderColor: '#34C759' }
+              ]}
+              onPress={() => setMetricType(MetricType.CALORIES)}
+            >
+              <Ionicons 
+                name="restaurant" 
+                size={24} 
+                color={metricType === MetricType.CALORIES ? '#fff' : '#34C759'} 
+              />
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.metricTypeButtonText,
+                  metricType === MetricType.CALORIES && styles.metricTypeButtonTextActive,
+                  { color: metricType === MetricType.CALORIES ? '#fff' : '#34C759' }
+                ]}
+              >
+                Calories
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.metricTypeButton,
+                metricType === MetricType.EVENT && styles.metricTypeButtonActive,
+                { borderColor: '#007AFF' }
+              ]}
+              onPress={() => setMetricType(MetricType.EVENT)}
+            >
+              <Ionicons 
+                name="calendar" 
+                size={24} 
+                color={metricType === MetricType.EVENT ? '#fff' : '#007AFF'} 
+              />
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.metricTypeButtonText,
+                  metricType === MetricType.EVENT && styles.metricTypeButtonTextActive,
+                  { color: metricType === MetricType.EVENT ? '#fff' : '#007AFF' }
+                ]}
+              >
+                Event
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -319,7 +484,7 @@ export default function HealthScreen() {
           </View>
         </View>
         
-        {metricType === 'sleep' && (
+        {metricType === MetricType.SLEEP && (
           <View style={styles.formSection}>
             <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
               Sleep Details
@@ -367,7 +532,7 @@ export default function HealthScreen() {
           </View>
         )}
         
-        {metricType === 'activity' && (
+        {metricType === MetricType.ACTIVITY && (
           <View style={styles.formSection}>
             <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
               Activity Details
@@ -405,7 +570,7 @@ export default function HealthScreen() {
           </View>
         )}
         
-        {metricType === 'heart_rate' && (
+        {metricType === MetricType.HEART_RATE && (
           <View style={styles.formSection}>
             <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
               Heart Rate Details
@@ -413,7 +578,7 @@ export default function HealthScreen() {
             
             <View style={styles.inputContainer}>
               <TextInput
-                label="Average Heart Rate (bpm)"
+                label="Resting Heart Rate (bpm)"
                 value={restingHr}
                 onChangeText={setRestingHr}
                 placeholder="65"
@@ -427,7 +592,188 @@ export default function HealthScreen() {
                 value={hrv}
                 onChangeText={setHrv}
                 placeholder="45"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+        )}
+
+        {metricType === MetricType.WEIGHT && (
+          <View style={styles.formSection}>
+            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+              Weight Details
+            </ThemedText>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Weight (lbs/kg)"
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="150"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Body Fat Percentage (%)"
+                value={bodyFatPercentage}
+                onChangeText={setBodyFatPercentage}
+                placeholder="20"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Muscle Mass (lbs/kg)"
+                value={muscleMass}
+                onChangeText={setMuscleMass}
+                placeholder="65"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Water Percentage (%)"
+                value={waterPercentage}
+                onChangeText={setWaterPercentage}
+                placeholder="60"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Bone Mass (lbs/kg)"
+                value={boneMass}
+                onChangeText={setBoneMass}
+                placeholder="3.5"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+        )}
+
+        {metricType === MetricType.CALORIES && (
+          <View style={styles.formSection}>
+            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+              Calories Details
+            </ThemedText>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Total Calories"
+                value={totalCalories}
+                onChangeText={setTotalCalories}
+                placeholder="500"
                 keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Protein (g)"
+                value={protein}
+                onChangeText={setProtein}
+                placeholder="25"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Fat (g)"
+                value={fat}
+                onChangeText={setFat}
+                placeholder="15"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Carbs (g)"
+                value={carbs}
+                onChangeText={setCarbs}
+                placeholder="60"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Meal Type"
+                value={mealType}
+                onChangeText={setMealType}
+                placeholder="Breakfast, Lunch, Dinner, Snack"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Meal Name"
+                value={mealName}
+                onChangeText={setMealName}
+                placeholder="Chicken Salad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Notes"
+                value={caloriesNotes}
+                onChangeText={setCaloriesNotes}
+                placeholder="Additional details about the meal"
+                multiline
+              />
+            </View>
+          </View>
+        )}
+
+        {metricType === MetricType.EVENT && (
+          <View style={styles.formSection}>
+            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
+              Event Details
+            </ThemedText>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Event Type"
+                value={eventType}
+                onChangeText={setEventType}
+                placeholder="Alcohol, Travel, Stress, etc."
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Duration (minutes)"
+                value={eventDuration}
+                onChangeText={setEventDuration}
+                placeholder="60"
+                keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Intensity (1-10)"
+                value={eventIntensity}
+                onChangeText={setEventIntensity}
+                placeholder="5"
+                keyboardType="number-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Notes"
+                value={eventNotes}
+                onChangeText={setEventNotes}
+                placeholder="Additional details about the event"
+                multiline
               />
             </View>
           </View>
@@ -530,15 +876,15 @@ export default function HealthScreen() {
             color: '#FF3B30', // Red
             bgColor: 'rgba(255, 59, 48, 0.1)' 
           };
-        case 'blood_glucose':
+        case 'calories':
           return { 
-            icon: 'water', 
-            color: '#5AC8FA', // Blue
-            bgColor: 'rgba(90, 200, 250, 0.1)' 
+            icon: 'restaurant', 
+            color: '#34C759', // Green
+            bgColor: 'rgba(52, 199, 89, 0.1)' 
           };
-        case 'oxygen_saturation':
+        case 'event':
           return { 
-            icon: 'fitness', 
+            icon: 'calendar', 
             color: '#007AFF', // Blue
             bgColor: 'rgba(0, 122, 255, 0.1)' 
           };
@@ -581,6 +927,37 @@ export default function HealthScreen() {
               details: [
                 { label: 'Resting HR', value: `${metric.value.resting_bpm || '0'} bpm` },
                 { label: 'HRV', value: `${metric.value.hrv_ms || '0'} ms` },
+              ]
+            };
+          case 'weight':
+            const weightValue = metric.value.value?.toFixed(1) || '0';
+            return {
+              primary: `${weightValue} lbs`,
+              details: [
+                { label: 'Body Fat', value: `${metric.value.body_fat_percentage?.toFixed(1) || 'N/A'}%` },
+                { label: 'Muscle Mass', value: `${metric.value.muscle_mass?.toFixed(1) || 'N/A'} lbs` },
+                { label: 'Water %', value: `${metric.value.water_percentage?.toFixed(1) || 'N/A'}%` },
+                { label: 'Bone Mass', value: `${metric.value.bone_mass?.toFixed(1) || 'N/A'} lbs` },
+              ]
+            };
+          case 'calories':
+            const calories = metric.value.total || '0';
+            return {
+              primary: `${calories} cal`,
+              details: [
+                { label: 'Protein', value: `${metric.value.protein?.toFixed(1) || '0'} g` },
+                { label: 'Fat', value: `${metric.value.fat?.toFixed(1) || '0'} g` },
+                { label: 'Carbs', value: `${metric.value.carbs?.toFixed(1) || '0'} g` },
+                { label: 'Meal', value: metric.value.meal_name || metric.value.meal_type || 'N/A' },
+              ]
+            };
+          case 'event':
+            return {
+              primary: metric.value.event_type || 'Event',
+              details: [
+                { label: 'Duration', value: metric.value.duration_minutes ? `${metric.value.duration_minutes} min` : 'N/A' },
+                { label: 'Intensity', value: metric.value.intensity ? `${metric.value.intensity}/10` : 'N/A' },
+                { label: 'Notes', value: metric.value.notes || 'No notes' },
               ]
             };
           case 'mood':
@@ -717,12 +1094,16 @@ export default function HealthScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[primaryColor as string]} 
+          />
         }
         showsVerticalScrollIndicator={false}
       >
         <ThemedText variant="displaySmall" style={styles.title}>
-          Health Data
+          Health Metrics
         </ThemedText>
         
         <View style={styles.tabContainer}>
@@ -730,6 +1111,7 @@ export default function HealthScreen() {
             style={[
               styles.tabButton,
               activeTab === 'view' && styles.activeTabButton,
+              { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
             ]}
             onPress={() => setActiveTab('view')}
           >
@@ -747,6 +1129,7 @@ export default function HealthScreen() {
             style={[
               styles.tabButton,
               activeTab === 'add' && styles.activeTabButton,
+              { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
             ]}
             onPress={() => setActiveTab('add')}
           >
@@ -815,23 +1198,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   tabButton: {
     flex: 1,
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderWidth: 0,
   },
   activeTabButton: {
-    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabButtonText: {
     textAlign: 'center',
+    fontWeight: '500',
   },
   activeTabButtonText: {
     color: '#0066CC',
+    fontWeight: '600',
   },
   loadingContainer: {
     padding: spacing.xl,
