@@ -4,18 +4,20 @@ from uuid import UUID
 from app.api.endpoints.auth import get_current_active_user
 from app.db.session import get_db
 from app.schemas.user import User as UserSchema
+from app.schemas.user_protocol import UserProtocol
 from app.schemas.user_protocol import UserProtocol as UserProtocolSchema
 from app.schemas.user_protocol import (
     UserProtocolCreate,
+    UserProtocolCreateAndEnroll,
     UserProtocolProgress,
     UserProtocolStatusUpdate,
     UserProtocolUpdate,
-    UserProtocolWithProtocol,
 )
 from app.services.user_protocol import (
+    create_user_protocol,
     delete_user_protocol,
     enroll_user_in_protocol,
-    get_active_protocols,
+    get_active_user_protocols,
     get_user_protocol,
     get_user_protocol_ai_adjustments,
     get_user_protocol_ai_analysis,
@@ -32,7 +34,7 @@ from sqlalchemy.orm import Session
 router = APIRouter()
 
 
-@router.get("/", response_model=List[UserProtocolWithProtocol])
+@router.get("/", response_model=List[UserProtocol])
 def read_user_protocols(
     *,
     db: Session = Depends(get_db),
@@ -48,12 +50,12 @@ def read_user_protocols(
     return user_protocols
 
 
-@router.get("/active", response_model=List[UserProtocolWithProtocol])
+@router.get("/active", response_model=List[UserProtocol])
 def read_active_user_protocols(*, db: Session = Depends(get_db), current_user: UserSchema = Depends(get_current_active_user)) -> Any:
     """
     Retrieve active user protocols.
     """
-    user_protocols = get_active_protocols(db=db, user_id=str(current_user.id))
+    user_protocols = get_active_user_protocols(db=db, user_id=current_user.id)
     return user_protocols
 
 
@@ -64,17 +66,15 @@ def enroll_in_protocol(
     """
     Enroll user in a protocol.
     """
-    user_protocol = enroll_user_in_protocol(
-        db=db, user_id=current_user.id, protocol_id=protocol_in.protocol_id, start_date=protocol_in.start_date
-    )
+    user_protocol = enroll_user_in_protocol(db=db, user_id=current_user.id, protocol_create=protocol_in, start_date=protocol_in.start_date)
 
     if not user_protocol:
-        raise HTTPException(status_code=404, detail="Protocol not found")
+        raise HTTPException(status_code=404, detail="Failed to create user protocol")
 
     return user_protocol
 
 
-@router.get("/{user_protocol_id}", response_model=UserProtocolWithProtocol)
+@router.get("/{user_protocol_id}", response_model=UserProtocol)
 def read_user_protocol(
     *, db: Session = Depends(get_db), user_protocol_id: UUID, current_user: UserSchema = Depends(get_current_active_user)
 ) -> Any:
@@ -111,7 +111,7 @@ def update_user_protocol_endpoint(
     if user_protocol.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to update this protocol")
 
-    user_protocol = update_user_protocol(db=db, db_obj=user_protocol, obj_in=protocol_in)
+    user_protocol = update_user_protocol(db=db, user_protocol_id=str(user_protocol_id), protocol_update=protocol_in)
     return user_protocol
 
 
@@ -284,3 +284,22 @@ async def get_ai_adjustments(
         raise HTTPException(status_code=404, detail=adjustments["error"])
 
     return adjustments
+
+
+@router.post("/create-and-enroll", response_model=UserProtocol)
+def create_and_enroll_protocol(
+    *, db: Session = Depends(get_db), protocol_in: UserProtocolCreateAndEnroll, current_user: UserSchema = Depends(get_current_active_user)
+) -> Any:
+    """
+    Create a new user protocol and automatically enroll the current user.
+    """
+    try:
+        # Create the user protocol
+        user_protocol = create_user_protocol(db=db, user_id=str(current_user.id), protocol=protocol_in)
+
+        if not user_protocol:
+            raise HTTPException(status_code=404, detail="Failed to create user protocol")
+
+        return user_protocol
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

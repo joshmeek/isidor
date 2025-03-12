@@ -11,7 +11,7 @@ class ProtocolCheckIn(Base):
     __tablename__ = "protocol_check_ins"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    protocol_id = Column(UUID(as_uuid=True), ForeignKey("user_protocols.id"), nullable=False)
+    user_protocol_id = Column(UUID(as_uuid=True), ForeignKey("user_protocols.id"), nullable=False)
     date = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     notes = Column(Text, nullable=True)
     metrics = Column(JSON, nullable=False, server_default=text("'{}'"))
@@ -20,4 +20,4 @@ class ProtocolCheckIn(Base):
     updated_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"), onupdate=func.now())
 
     # Relationships
-    protocol = relationship("UserProtocol", back_populates="check_ins")
+    user_protocol = relationship("UserProtocol", back_populates="check_ins")

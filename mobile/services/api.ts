@@ -620,10 +620,38 @@ export async function getActiveProtocols(): Promise<UserProtocolWithProtocol[]> 
 
 export async function enrollInProtocol(protocolId: string): Promise<UserProtocol> {
   console.log(`Enrolling in protocol: ${protocolId}`);
-  const enrollmentData: UserProtocolCreate = {
-    protocol_id: protocolId
-  };
-  return authenticatedRequest<UserProtocol>('/api/v1/user-protocols/enroll', 'POST', enrollmentData);
+  
+  try {
+    // First, get the protocol details
+    const protocol = await getProtocolDetails(protocolId);
+    console.log('Got protocol details:', JSON.stringify(protocol));
+    
+    if (!protocol) {
+      throw new Error('Protocol not found');
+    }
+    
+    // Create the enrollment data using the protocol details
+    const enrollmentData = {
+      name: protocol.name,
+      description: protocol.description || '',
+      duration_days: protocol.duration_days || 30, // Default to 30 days if not specified
+      target_metrics: protocol.target_metrics || [],
+      steps: protocol.steps || [],
+      recommendations: protocol.recommendations || [],
+      expected_outcomes: protocol.expected_outcomes || [],
+      category: protocol.category,
+      start_date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+      template_id: protocolId // Use the protocol ID as the template ID
+    };
+    
+    console.log('Enrollment data:', JSON.stringify(enrollmentData));
+    
+    // Use the create-and-enroll endpoint
+    return authenticatedRequest<UserProtocol>('/api/v1/user-protocols/create-and-enroll', 'POST', enrollmentData);
+  } catch (error) {
+    console.error('Error in enrollInProtocol:', error);
+    throw error;
+  }
 }
 
 export async function getProtocolDetails(protocolId: string): Promise<Protocol> {
@@ -754,4 +782,38 @@ export async function updateUserProtocolStatus(userProtocolId: string, status: s
     'PUT',
     statusUpdate
   );
+}
+
+export interface ProtocolCreate {
+  name: string;
+  description: string;
+  duration_days: number;
+  target_metrics: string[];
+  steps?: string[];
+  recommendations?: string[];
+  expected_outcomes?: string[];
+  category?: string;
+}
+
+export interface ProtocolCreateAndEnroll {
+  name: string;
+  description: string;
+  duration_days: number;
+  target_metrics: string[];
+  steps?: string[];
+  recommendations?: string[];
+  expected_outcomes?: string[];
+  category?: string;
+  start_date?: string;
+  template_id?: string;
+}
+
+export async function createProtocol(protocol: ProtocolCreate): Promise<Protocol> {
+  console.log('Creating custom protocol:', JSON.stringify(protocol, null, 2));
+  return authenticatedRequest<Protocol>('/api/v1/protocols', 'POST', protocol);
+}
+
+export async function createAndEnrollProtocol(protocol: ProtocolCreateAndEnroll): Promise<UserProtocolWithProtocol> {
+  console.log('Creating and enrolling in protocol:', JSON.stringify(protocol, null, 2));
+  return authenticatedRequest<UserProtocolWithProtocol>('/api/v1/user-protocols/create-and-enroll', 'POST', protocol);
 } 

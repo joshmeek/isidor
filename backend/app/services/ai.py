@@ -3,9 +3,12 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import google.generativeai as genai
+from app.models.protocol import Protocol
+from app.models.user_protocol import UserProtocol
 from app.services.ai_cache import create_cached_response, generate_query_hash, get_cached_response
 from app.services.ai_memory import create_or_update_ai_memory, get_ai_memory
 from app.utils.rag import format_context_for_prompt, retrieve_context_for_user
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 # Configure the Gemini API

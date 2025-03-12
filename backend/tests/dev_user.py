@@ -642,18 +642,19 @@ def create_health_metrics():
                 metrics_by_type[metric_type] = []
             metrics_by_type[metric_type].append(metric)
         else:
-            print(f"Failed to create metric: {response.text}")
+            pass
+            # print(f"Failed to create metric")
 
     # Print summary
-    print(f"\nCreated {len(HEALTH_METRIC_IDS)} health metrics:")
-    for metric_type, metrics in metrics_by_type.items():
-        print(f"  - {metric_type.capitalize()}: {len(metrics)} metrics")
-        if metrics:
-            sample = metrics[0]
-            print(f"    Sample {metric_type} metric:")
-            print(f"      Date: {sample['date']}")
-            print(f"      Source: {sample['source']}")
-            print(f"      Value: {json.dumps(sample['value'], indent=2)}")
+    # print(f"\nCreated {len(HEALTH_METRIC_IDS)} health metrics:")
+    # for metric_type, metrics in metrics_by_type.items():
+    #     print(f"  - {metric_type.capitalize()}: {len(metrics)} metrics")
+    #     if metrics:
+    #         sample = metrics[0]
+    #         print(f"    Sample {metric_type} metric:")
+    #         print(f"      Date: {sample['date']}")
+    #         print(f"      Source: {sample['source']}")
+    #         print(f"      Value: {json.dumps(sample['value'], indent=2)}")
 
     return True
 
@@ -704,17 +705,19 @@ def enroll_in_protocols():
         # Format the date as YYYY-MM-DD for the API
         today = datetime.now().date().isoformat()
 
-        # Calculate end date if it's a fixed duration protocol
-        end_date = None
-        if protocol_details["duration_type"] == "fixed" and protocol_details["duration_days"]:
-            end_date = (datetime.now() + timedelta(days=protocol_details["duration_days"])).date().isoformat()
+        # Create enrollment data with all required fields for UserProtocolCreateAndEnroll
+        enrollment_data = {
+            "name": protocol_details["name"],
+            "description": protocol_details["description"],
+            "duration_days": protocol_details["duration_days"],
+            "target_metrics": protocol_details["target_metrics"],
+            "start_date": today,
+            "template_id": protocol_details["template_id"],
+        }
 
-        # Create enrollment data with comprehensive details
-        enrollment_data = {"protocol_id": protocol_id, "start_date": today}
+        print(f"Enrolling in protocol: {protocol_details['name']}")
 
-        print(f"Enrolling in protocol: {protocol_details['name']} (ID: {protocol_id})")
-
-        response = requests.post(f"{BASE_URL}/user-protocols/enroll", json=enrollment_data, headers=headers)
+        response = requests.post(f"{BASE_URL}/user-protocols/create-and-enroll", json=enrollment_data, headers=headers)
 
         if response.status_code == 200:
             user_protocol_data = response.json()
@@ -725,7 +728,7 @@ def enroll_in_protocols():
             print(f"Failed to enroll in protocol: {response.text}")
 
     # Create some check-ins for the protocols
-    create_protocol_check_ins()
+    # create_protocol_check_ins()
 
     print(f"Enrolled in {len(USER_PROTOCOL_IDS)} protocols")
     return True
@@ -784,7 +787,7 @@ def create_protocol_check_ins():
             check_in_date = (datetime.now() - timedelta(days=days_ago)).date().isoformat()
             check_in_data = {**check_in, "date": check_in_date}
 
-            response = requests.post(f"{BASE_URL}/protocols/{user_protocol_id}/check-ins", json=check_in_data, headers=headers)
+            response = requests.post(f"{BASE_URL}/user-protocols/{user_protocol_id}/check-ins", json=check_in_data, headers=headers)
 
             if response.status_code == 200:
                 check_in_count += 1
@@ -948,7 +951,10 @@ def print_dev_user_info():
         protocols_data = protocols_response.json()
         print(f"\nActive Protocols: {len(protocols_data)}")
         for protocol in protocols_data:
-            print(f"  - {protocol['protocol']['name']} (Status: {protocol['status']})")
+            # Handle the new protocol structure
+            protocol_name = protocol.get("name", "Unknown Protocol")
+            protocol_status = protocol.get("status", "unknown")
+            print(f"  - {protocol_name} (Status: {protocol_status})")
 
     # Get health metrics
     metrics_response = requests.get(

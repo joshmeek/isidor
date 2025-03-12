@@ -832,34 +832,40 @@ export default function HomeScreen() {
 
     return (
       <View style={styles.protocolsContainer}>
-        {activeProtocols.map((protocol) => (
-          <Card
-            key={protocol.id}
-            title={protocol.protocol?.name || 'Protocol'}
-            subtitle={`Started: ${new Date(protocol.start_date || '').toLocaleDateString()}`}
-            leftIcon={<Ionicons name="list" size={24} color={secondaryColor as string} />}
-            style={styles.protocolCard}
-            onPress={() => router.push(`/protocol-details?id=${protocol.id}`)}
-            footer={
-              <View style={styles.protocolFooter}>
-                <ThemedText variant="caption" secondary>
-                  {protocol.status === 'active' ? 'Active' : 'In Progress'}
-                </ThemedText>
-                <Button
-                  title="View"
-                  variant="outline"
-                  size="sm"
-                  rightIcon="chevron-forward"
-                  onPress={() => router.push(`/protocol-details?id=${protocol.id}`)}
-                />
-              </View>
-            }
-          >
-            <ThemedText variant="bodySmall" secondary numberOfLines={2}>
-              {protocol.protocol?.description || 'No description available'}
-            </ThemedText>
-          </Card>
-        ))}
+        {activeProtocols.map((protocol) => {
+          // Ensure we have the protocol name and description
+          const protocolName = protocol.name || protocol.protocol?.name || 'Protocol';
+          const protocolDescription = protocol.description || protocol.protocol?.description || 'No description available';
+          
+          return (
+            <Card
+              key={protocol.id}
+              title={protocolName}
+              subtitle={`Started: ${new Date(protocol.start_date || '').toLocaleDateString()}`}
+              leftIcon={<Ionicons name="list" size={24} color={secondaryColor as string} />}
+              style={styles.protocolCard}
+              onPress={() => router.push(`/protocol-details?id=${protocol.id}&type=user`)}
+              footer={
+                <View style={styles.protocolFooter}>
+                  <ThemedText variant="caption" secondary>
+                    {protocol.status === 'active' ? 'Active' : 'In Progress'}
+                  </ThemedText>
+                  <Button
+                    title="View"
+                    variant="outline"
+                    size="sm"
+                    rightIcon="chevron-forward"
+                    onPress={() => router.push(`/protocol-details?id=${protocol.id}&type=user`)}
+                  />
+                </View>
+              }
+            >
+              <ThemedText variant="bodySmall" secondary numberOfLines={2}>
+                {protocolDescription}
+              </ThemedText>
+            </Card>
+          );
+        })}
       </View>
     );
   };

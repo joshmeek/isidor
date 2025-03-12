@@ -3,12 +3,10 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from app.models.protocol import Protocol
 from app.models.protocol_check_in import ProtocolCheckIn
 from app.models.user_protocol import UserProtocol
-from app.schemas.protocol import CheckInCreate, ProtocolCreate, ProtocolUpdate
-from app.schemas.user_protocol import UserProtocolCreate, UserProtocolUpdate
-from app.services.protocol import get_protocol, get_protocol_template_details
+from app.schemas.protocol import CheckInCreate
+from app.schemas.user_protocol import UserProtocolCreate, UserProtocolCreateAndEnroll, UserProtocolUpdate
 from sqlalchemy import and_
 from sqlalchemy.orm import Session, joinedload
 
@@ -30,7 +28,7 @@ def get_user_protocols(db: Session, user_id: UUID, skip: int = 0, limit: int = 1
         status: Filter by status (active, completed, paused, etc.)
 
     Returns:
-        List of UserProtocol objects with protocol relationships loaded
+        List of UserProtocol objects
     """
     # Convert string user_id to UUID if needed
     user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
@@ -46,31 +44,18 @@ def get_user_protocols(db: Session, user_id: UUID, skip: int = 0, limit: int = 1
     query = query.order_by(UserProtocol.created_at.desc())
     query = query.offset(skip).limit(limit)
 
-    # Load protocol relationship
-    query = query.options(joinedload(UserProtocol.protocol))
-
     # Execute query
     user_protocols = query.all()
 
     # Process the results to fix validation issues
     for up in user_protocols:
-        # Ensure protocol_id is set
-        if up.protocol and not up.protocol_id:
-            up.protocol_id = up.protocol.id
-
         # Convert datetime to date for start_date and end_date
         if isinstance(up.start_date, datetime):
             up.start_date = up.start_date.date()
         if up.end_date and isinstance(up.end_date, datetime):
             up.end_date = up.end_date.date()
 
-    # Filter out any user protocols without valid protocol relationships
-    valid_protocols = []
-    for up in user_protocols:
-        if up.protocol_id is not None:
-            valid_protocols.append(up)
-
-    return valid_protocols
+    return user_protocols
 
 
 def get_active_user_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
@@ -78,32 +63,27 @@ def get_active_user_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
     return db.query(UserProtocol).filter(and_(UserProtocol.user_id == user_id, UserProtocol.status == "active")).all()
 
 
-def enroll_user_in_protocol(db: Session, user_id: UUID, protocol_id: UUID, start_date: Optional[date] = None) -> Optional[UserProtocol]:
+def enroll_user_in_protocol(
+    db: Session, user_id: UUID, protocol_create: UserProtocolCreate, start_date: Optional[date] = None
+) -> Optional[UserProtocol]:
     """Enroll a user in a protocol."""
-    # Check if protocol exists
-    protocol = get_protocol(db, protocol_id)
-    if not protocol:
-        return None
-
     # Use today's date if start_date is not provided
     if not start_date:
         start_date = date.today()
 
-    # Calculate end date for fixed duration protocols
-    end_date = None
-    if protocol.duration_type == "fixed" and protocol.duration_days:
-        end_date = start_date + timedelta(days=protocol.duration_days)
-
     # Create user protocol
     db_obj = UserProtocol(
         user_id=user_id,
-        protocol_id=protocol_id,
+        name=protocol_create.name,
+        description=protocol_create.description,
         start_date=start_date,
-        end_date=end_date,
+        end_date=None,
         status="active",
-        name=protocol.name,  # Copy name from protocol
-        description=protocol.description,  # Copy description from protocol
-        target_metrics=protocol.target_metrics,  # Copy target metrics from protocol
+        target_metrics=protocol_create.target_metrics,
+        steps=protocol_create.steps,
+        recommendations=protocol_create.recommendations,
+        expected_outcomes=protocol_create.expected_outcomes,
+        category=protocol_create.category,
     )
 
     db.add(db_obj)
@@ -136,25 +116,52 @@ def update_user_protocol_status(db: Session, user_protocol_id: UUID, status: str
     return db_obj
 
 
-def update_user_protocol(db: Session, db_obj: UserProtocol, obj_in: UserProtocolUpdate) -> UserProtocol:
-    """Update a user protocol."""
-    update_data = obj_in.model_dump(exclude_unset=True)
+def update_user_protocol(db: Session, user_protocol_id: str, protocol_update: UserProtocolUpdate) -> Optional[UserProtocol]:
+    """
+    Update a user protocol.
 
-    for field, value in update_data.items():
-        setattr(db_obj, field, value)
+    Args:
+        db: Database session
+        user_protocol_id: ID of the user protocol to update
+        protocol_update: Protocol update data
 
-    db.add(db_obj)
+    Returns:
+        Updated UserProtocol object if found, None otherwise
+    """
+    db_protocol = get_user_protocol(db, user_protocol_id)
+    if not db_protocol:
+        return None
+
+    # Update protocol fields
+    update_data = protocol_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_protocol, key, value)
+
     db.commit()
-    db.refresh(db_obj)
-    return db_obj
+    db.refresh(db_protocol)
+
+    return db_protocol
 
 
-def delete_user_protocol(db: Session, user_protocol_id: UUID) -> None:
-    """Delete a user protocol."""
-    db_obj = db.query(UserProtocol).get(user_protocol_id)
-    if db_obj:
-        db.delete(db_obj)
-        db.commit()
+def delete_user_protocol(db: Session, user_protocol_id: str) -> bool:
+    """
+    Delete a user protocol.
+
+    Args:
+        db: Database session
+        user_protocol_id: ID of the user protocol to delete
+
+    Returns:
+        True if deleted, False if not found
+    """
+    db_protocol = get_user_protocol(db, user_protocol_id)
+    if not db_protocol:
+        return False
+
+    db.delete(db_protocol)
+    db.commit()
+
+    return True
 
 
 def get_user_protocol_progress(db: Session, user_protocol_id: UUID) -> Dict[str, Any]:
@@ -163,44 +170,26 @@ def get_user_protocol_progress(db: Session, user_protocol_id: UUID) -> Dict[str,
     if not db_obj:
         return {}
 
-    # Get protocol details
-    protocol = db_obj.protocol
-
     # Calculate progress
     progress = {}
 
     # Calculate days elapsed
     start_date = db_obj.start_date.date() if db_obj.start_date else None
     today = date.today()
-    
+
     days_elapsed = 0
     if start_date:
         days_elapsed = (today - start_date).days
 
-    # Calculate completion percentage for fixed duration protocols
-    completion_percentage = None
-    if protocol.duration_type == "fixed" and protocol.duration_days:
-        completion_percentage = min(100, int((days_elapsed / protocol.duration_days) * 100))
-
-    # Calculate days remaining for fixed duration protocols
-    days_remaining = None
-    if protocol.duration_type == "fixed" and protocol.duration_days:
-        days_remaining = max(0, protocol.duration_days - days_elapsed)
-
     # Compile progress information
     progress = {
         "user_protocol_id": db_obj.id,
-        "protocol_id": protocol.id,
-        "protocol_name": protocol.name,
+        "protocol_name": db_obj.name,
         "status": db_obj.status,
         "start_date": start_date,
         "end_date": db_obj.end_date,
         "days_elapsed": days_elapsed,
-        "days_remaining": days_remaining,
-        "completion_percentage": completion_percentage,
-        "duration_type": protocol.duration_type,
-        "duration_days": protocol.duration_days,
-        "target_metrics": protocol.target_metrics,
+        "target_metrics": db_obj.target_metrics,
     }
 
     return progress
@@ -271,7 +260,7 @@ async def get_user_protocol_ai_adjustments(db: Session, user_protocol_id: UUID) 
     return await generate_protocol_adjustments_with_ai(db=db, user_protocol_id=user_protocol_id)
 
 
-def create_user_protocol(db: Session, user_id: str, protocol: ProtocolCreate) -> UserProtocol:
+def create_user_protocol(db: Session, user_id: str, protocol: UserProtocolCreateAndEnroll) -> UserProtocol:
     """
     Create a new protocol for a user, either from a template or custom.
 
@@ -285,29 +274,21 @@ def create_user_protocol(db: Session, user_id: str, protocol: ProtocolCreate) ->
     """
     protocol_id = uuid.uuid4()
 
-    # If using a template, get template details
-    template_details = None
-    if protocol.template_id:
-        template_details = get_protocol_template_details(protocol.template_id)
-        if not template_details:
-            raise ValueError(f"Protocol template with ID {protocol.template_id} not found")
-
     # Create protocol object
     db_protocol = UserProtocol(
         id=protocol_id,
-        user_id=uuid.UUID(user_id),
-        name=protocol.name or (template_details.get("name") if template_details else "Custom Protocol"),
-        description=protocol.description or (template_details.get("description") if template_details else ""),
+        user_id=user_id,
+        name=protocol.name,
+        description=protocol.description,
         start_date=protocol.start_date or datetime.now(),
-        end_date=calculate_end_date(protocol, template_details),
+        end_date=None,
         status="active",
-        template_id=protocol.template_id,
-        target_metrics=protocol.target_metrics or (template_details.get("target_metrics") if template_details else []),
-        custom_fields=protocol.custom_fields or {},
-        steps=protocol.steps or (template_details.get("steps") if template_details else []),
-        recommendations=protocol.recommendations or (template_details.get("recommendations") if template_details else []),
-        expected_outcomes=protocol.expected_outcomes or (template_details.get("expected_outcomes") if template_details else []),
-        category=protocol.category or (template_details.get("category") if template_details else "custom"),
+        template_id=None,
+        target_metrics=protocol.target_metrics,
+        steps=protocol.steps or [],
+        recommendations=protocol.recommendations or [],
+        expected_outcomes=protocol.expected_outcomes or [],
+        category=protocol.category,
     )
 
     db.add(db_protocol)
@@ -317,7 +298,7 @@ def create_user_protocol(db: Session, user_id: str, protocol: ProtocolCreate) ->
     return db_protocol
 
 
-def calculate_end_date(protocol: ProtocolCreate, template_details: Optional[Dict[str, Any]] = None) -> Optional[datetime]:
+def calculate_end_date(protocol: UserProtocolCreateAndEnroll, template_details: Optional[Dict[str, Any]] = None) -> Optional[datetime]:
     """
     Calculate the end date for a protocol based on protocol data or template details.
 
@@ -329,7 +310,7 @@ def calculate_end_date(protocol: ProtocolCreate, template_details: Optional[Dict
         Calculated end date or None for ongoing protocols
     """
     # If end date is explicitly provided, use it
-    if protocol.end_date:
+    if hasattr(protocol, "end_date") and protocol.end_date:
         return protocol.end_date
 
     # If duration days is provided in protocol data
@@ -364,61 +345,13 @@ def get_user_protocol(db: Session, user_protocol_id: str) -> Optional[UserProtoc
     return db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
 
 
-def update_user_protocol(db: Session, protocol_id: str, protocol_update: ProtocolUpdate) -> Optional[UserProtocol]:
+def create_protocol_check_in(db: Session, user_protocol_id: str, check_in: CheckInCreate) -> ProtocolCheckIn:
     """
-    Update a user protocol.
+    Create a check-in for a user protocol.
 
     Args:
         db: Database session
-        protocol_id: ID of the protocol to update
-        protocol_update: Protocol update data
-
-    Returns:
-        Updated UserProtocol object if found, None otherwise
-    """
-    db_protocol = get_user_protocol(db, protocol_id)
-    if not db_protocol:
-        return None
-
-    # Update protocol fields
-    update_data = protocol_update.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_protocol, key, value)
-
-    db.commit()
-    db.refresh(db_protocol)
-
-    return db_protocol
-
-
-def delete_user_protocol(db: Session, protocol_id: str) -> bool:
-    """
-    Delete a user protocol.
-
-    Args:
-        db: Database session
-        protocol_id: ID of the protocol to delete
-
-    Returns:
-        True if deleted, False if not found
-    """
-    db_protocol = get_user_protocol(db, protocol_id)
-    if not db_protocol:
-        return False
-
-    db.delete(db_protocol)
-    db.commit()
-
-    return True
-
-
-def create_protocol_check_in(db: Session, protocol_id: str, check_in: CheckInCreate) -> ProtocolCheckIn:
-    """
-    Create a check-in for a protocol.
-
-    Args:
-        db: Database session
-        protocol_id: ID of the protocol
+        user_protocol_id: ID of the user protocol
         check_in: Check-in creation data
 
     Returns:
@@ -428,7 +361,7 @@ def create_protocol_check_in(db: Session, protocol_id: str, check_in: CheckInCre
 
     db_check_in = ProtocolCheckIn(
         id=check_in_id,
-        protocol_id=protocol_id,
+        user_protocol_id=user_protocol_id,
         date=check_in.date or datetime.now(),
         notes=check_in.notes,
         metrics=check_in.metrics,
@@ -442,18 +375,18 @@ def create_protocol_check_in(db: Session, protocol_id: str, check_in: CheckInCre
     return db_check_in
 
 
-def get_protocol_check_ins(db: Session, protocol_id: str) -> List[ProtocolCheckIn]:
+def get_protocol_check_ins(db: Session, user_protocol_id: str) -> List[ProtocolCheckIn]:
     """
-    Get all check-ins for a protocol.
+    Get all check-ins for a user protocol.
 
     Args:
         db: Database session
-        protocol_id: ID of the protocol
+        user_protocol_id: ID of the user protocol
 
     Returns:
         List of ProtocolCheckIn objects
     """
-    return db.query(ProtocolCheckIn).filter(ProtocolCheckIn.protocol_id == protocol_id).all()
+    return db.query(ProtocolCheckIn).filter(ProtocolCheckIn.user_protocol_id == user_protocol_id).all()
 
 
 def get_active_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
@@ -465,7 +398,7 @@ def get_active_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
         user_id: ID of the user
 
     Returns:
-        List of active UserProtocol objects with protocol details
+        List of active UserProtocol objects
     """
     # Convert string user_id to UUID if needed
     user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
@@ -473,13 +406,7 @@ def get_active_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
     # Use the get_user_protocols function with status filter
     user_protocols = get_user_protocols(db=db, user_id=user_id_uuid, status="active")
 
-    # Additional validation to ensure all protocols have valid relationships
-    valid_protocols = []
-    for up in user_protocols:
-        if up.protocol_id is not None and up.protocol is not None:
-            valid_protocols.append(up)
-
-    return valid_protocols
+    return user_protocols
 
 
 def get_completed_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
@@ -491,7 +418,7 @@ def get_completed_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
         user_id: ID of the user
 
     Returns:
-        List of completed UserProtocol objects with protocol details
+        List of completed UserProtocol objects
     """
     # Convert string user_id to UUID if needed
     user_id_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
@@ -499,10 +426,4 @@ def get_completed_protocols(db: Session, user_id: UUID) -> List[UserProtocol]:
     # Use the get_user_protocols function with status filter
     user_protocols = get_user_protocols(db=db, user_id=user_id_uuid, status="completed")
 
-    # Additional validation to ensure all protocols have valid relationships
-    valid_protocols = []
-    for up in user_protocols:
-        if up.protocol_id is not None and up.protocol is not None:
-            valid_protocols.append(up)
-
-    return valid_protocols
+    return user_protocols

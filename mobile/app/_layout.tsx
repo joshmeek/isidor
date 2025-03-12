@@ -65,19 +65,19 @@ function RootLayoutNav() {
       const isAuthScreen = segments[0] === 'login' || segments[0] === 'network-check';
       // Check if user is already in the tabs directory
       const isInTabsDirectory = segments[0] === '(tabs)';
-      // Check if user is on the protocol details screen
-      const isProtocolDetails = segments[0] === 'protocol-details';
+      // Check if user is on the protocol details or create protocol screen
+      const isProtocolScreen = segments[0] === 'protocol-details' || segments[0] === 'create-protocol';
       
       console.log('Navigation check:', { 
         isAuthenticated, 
         isAuthScreen, 
         isInTabsDirectory, 
-        isProtocolDetails,
+        isProtocolScreen,
         segments 
       });
 
-      if (isAuthenticated && !isAuthScreen && !isInTabsDirectory && !isProtocolDetails) {
-        // Only redirect to tabs if not already in tabs and not on protocol details
+      if (isAuthenticated && !isAuthScreen && !isInTabsDirectory && !isProtocolScreen) {
+        // Only redirect to tabs if not already in tabs and not on protocol details or create protocol
         console.log('Redirecting to tabs');
         router.replace('/(tabs)');
       } else if (!isAuthenticated && !isAuthScreen) {
@@ -104,6 +104,13 @@ function RootLayoutNav() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen 
             name="protocol-details" 
+            options={{ 
+              headerShown: false,
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="create-protocol" 
             options={{ 
               headerShown: false,
               presentation: 'card' 

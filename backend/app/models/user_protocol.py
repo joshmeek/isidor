@@ -13,7 +13,6 @@ class UserProtocol(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    protocol_id = Column(UUID(as_uuid=True), ForeignKey("protocols.id"), nullable=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     start_date = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
@@ -31,5 +30,4 @@ class UserProtocol(Base):
 
     # Relationships
     user = relationship("User", back_populates="protocols")
-    protocol = relationship("Protocol", back_populates="user_protocols")
-    check_ins = relationship("ProtocolCheckIn", back_populates="protocol", cascade="all, delete-orphan")
+    check_ins = relationship("ProtocolCheckIn", back_populates="user_protocol", cascade="all, delete-orphan")

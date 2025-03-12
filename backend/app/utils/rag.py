@@ -151,7 +151,6 @@ def retrieve_context_for_user(
         for protocol in active_protocols:
             protocol_dict = {
                 "id": str(protocol.id),
-                "protocol_id": str(protocol.protocol_id),
                 "start_date": protocol.start_date.isoformat() if protocol.start_date else None,
                 "status": protocol.status,
             }

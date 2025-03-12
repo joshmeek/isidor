@@ -96,11 +96,8 @@ export default function ProtocolDetailsScreen() {
         return '#0066CC'; // Blue
       case 'completed':
         return '#34C759'; // Green
-      case 'abandoned':
       case 'cancelled':
         return '#FF3B30'; // Red
-      case 'paused':
-        return '#FF9500'; // Orange
       default:
         return primaryColor;
     }
@@ -281,12 +278,12 @@ export default function ProtocolDetailsScreen() {
               disabled={isUpdatingStatus || justUpdatedStatus}
             />
             <Button
-              title="Abandon Protocol"
+              title="Cancel Protocol"
               variant="destructive"
               size="md"
               leftIcon="close-circle"
               style={styles.actionButton}
-              onPress={() => handleStatusUpdate('abandoned')}
+              onPress={() => handleStatusUpdate('cancelled')}
               isLoading={isUpdatingStatus}
               disabled={isUpdatingStatus || justUpdatedStatus}
             />
@@ -310,8 +307,8 @@ export default function ProtocolDetailsScreen() {
           <ThemedText variant="bodyMedium" style={[styles.statusMessage, { color: getStatusColor() }]}>
             {userProtocol.status === 'completed' 
               ? "You've successfully completed this protocol!" 
-              : userProtocol.status === 'abandoned'
-                ? "You've abandoned this protocol."
+              : userProtocol.status === 'cancelled'
+                ? "You've cancelled this protocol."
                 : `This protocol is currently ${getStatusText().toLowerCase()}.`
             }
           </ThemedText>

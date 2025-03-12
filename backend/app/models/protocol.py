@@ -1,7 +1,7 @@
 import uuid
 
 from app.db.session import Base
-from sqlalchemy import ARRAY, Column, Integer, String, Text, text, DateTime
+from sqlalchemy import ARRAY, Column, DateTime, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -19,5 +19,4 @@ class Protocol(Base):
     created_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP"), onupdate=func.now())
 
-    # Relationships
-    user_protocols = relationship("UserProtocol", back_populates="protocol", cascade="all, delete-orphan")
+    # Relationships removed

@@ -86,17 +86,31 @@ export default function ProtocolsScreen() {
   // Function to enroll in a protocol
   const enrollInProtocol = async (protocolId: string) => {
     try {
+      console.log('Starting enrollment for protocol:', protocolId);
       setIsLoading(true);
-      await api.enrollInProtocol(protocolId);
+      
+      // Enroll in the protocol
+      const result = await api.enrollInProtocol(protocolId);
+      console.log('Enrollment successful:', result);
       
       // Reload data after enrolling
       await loadData();
       
       // Switch to enrolled tab
       setActiveTab('enrolled');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error enrolling in protocol:', err);
-      setError('Failed to enroll in protocol. Please try again.');
+      
+      // Show a more detailed error message
+      let errorMessage = 'Failed to enroll in protocol. Please try again.';
+      if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      if (err.status === 422) {
+        errorMessage = 'Invalid protocol data. Please check the protocol details.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +143,20 @@ export default function ProtocolsScreen() {
 
     return (
       <View style={styles.protocolsContainer}>
+        <Card style={styles.createProtocolCard}>
+          <Button
+            title="Create Custom Protocol"
+            variant="primary"
+            size="md"
+            leftIcon="add-circle"
+            onPress={() => router.push('/create-protocol')}
+            style={styles.createButton}
+          />
+          <ThemedText variant="bodySmall" secondary style={styles.createProtocolDescription}>
+            Create your own custom protocol with personalized goals and metrics
+          </ThemedText>
+        </Card>
+
         {protocols.map((protocol) => {
           const alreadyEnrolled = isEnrolled(protocol.id);
           
@@ -195,6 +223,9 @@ export default function ProtocolsScreen() {
 
   // Render enrolled protocols
   const renderEnrolledProtocols = () => {
+    // Debug logging
+    console.log('renderEnrolledProtocols called, userProtocols:', JSON.stringify(userProtocols));
+    
     if (userProtocols.length === 0) {
       return (
         <Card style={styles.emptyCard}>
@@ -216,8 +247,12 @@ export default function ProtocolsScreen() {
     return (
       <View style={styles.protocolsContainer}>
         {userProtocols.map((userProtocol) => {
-          const protocol = userProtocol.protocol;
-          if (!protocol) return null;
+          // Debug logging for each protocol
+          console.log('Processing userProtocol:', userProtocol.id, 'protocol property:', userProtocol.protocol ? 'exists' : 'undefined');
+          
+          // Use the protocol object if available, otherwise use the userProtocol directly
+          const protocolName = userProtocol.protocol?.name || userProtocol.name || 'Unnamed Protocol';
+          const protocolDescription = userProtocol.protocol?.description || userProtocol.description || 'No description available';
           
           // Calculate progress
           const startDate = new Date(userProtocol.start_date);
@@ -227,8 +262,8 @@ export default function ProtocolsScreen() {
           let progress = 0;
           let daysLeft = 0;
           
-          if (protocol.duration_days && protocol.duration_days > 0) {
-            const totalDays = protocol.duration_days;
+          if (userProtocol.protocol?.duration_days && userProtocol.protocol.duration_days > 0) {
+            const totalDays = userProtocol.protocol.duration_days;
             const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
             daysLeft = Math.max(0, totalDays - daysPassed);
             progress = Math.min(1, Math.max(0, daysPassed / totalDays));
@@ -248,7 +283,7 @@ export default function ProtocolsScreen() {
           return (
             <Card
               key={userProtocol.id}
-              title={protocol.name}
+              title={protocolName}
               subtitle={`Started: ${new Date(userProtocol.start_date).toLocaleDateString()}`}
               leftIcon={<Ionicons name="list" size={24} color={secondaryColor} />}
               style={styles.protocolCard}
@@ -272,7 +307,7 @@ export default function ProtocolsScreen() {
               }
             >
               <ThemedText variant="bodySmall" secondary numberOfLines={2} style={styles.protocolDescription}>
-                {protocol.description || 'No description available'}
+                {protocolDescription}
               </ThemedText>
             </Card>
           );
@@ -487,5 +522,15 @@ const styles = StyleSheet.create({
   },
   browseButton: {
     marginTop: spacing.sm,
-  }
+  },
+  createProtocolCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  createButton: {
+    marginBottom: spacing.sm,
+  },
+  createProtocolDescription: {
+    opacity: 0.7,
+  },
 }); 

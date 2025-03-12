@@ -4,7 +4,6 @@ from uuid import UUID
 from app.api.endpoints.auth import get_current_active_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.protocol import CheckInCreate, CheckInResponse
 from app.schemas.protocol import Protocol as ProtocolSchema
 from app.schemas.protocol import (
     ProtocolCreate,
@@ -26,17 +25,6 @@ from app.services.protocol import (
     get_protocol_templates,
     get_protocols,
     update_protocol,
-)
-from app.services.user_protocol import (
-    create_protocol_check_in,
-    create_user_protocol,
-    delete_user_protocol,
-    get_active_protocols,
-    get_completed_protocols,
-    get_protocol_check_ins,
-    get_user_protocol,
-    get_user_protocols,
-    update_user_protocol,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -71,14 +59,17 @@ def get_template_details(template_id: str, db: Session = Depends(get_db), curren
 
 
 @router.post("", response_model=ProtocolResponse)
-def create_protocol(protocol: ProtocolCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+def create_new_protocol(protocol: ProtocolCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """
-    Create a new protocol for the current user.
+    Create a new protocol.
 
     Can be created from a template or as a custom protocol.
     """
     try:
-        db_protocol = create_user_protocol(db=db, user_id=str(current_user.id), protocol=protocol)
+        if protocol.template_id:
+            db_protocol = create_protocol_from_template(db=db, template_id=protocol.template_id)
+        else:
+            db_protocol = create_protocol(db=db, protocol_in=protocol)
         return db_protocol
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -98,24 +89,8 @@ def list_protocols(
     Optionally filter by status.
     """
     try:
-        # Log the user ID to help with debugging
-        print(f"Listing protocols for user: {current_user.id}")
-        print(f"Query parameters: status={status}, skip={skip}, limit={limit}")
+        protocols = get_protocols(db, skip=skip, limit=limit, status=status)
 
-        # Get protocols from the database
-        if status == "active":
-            print("Getting active protocols")
-            protocols = get_active_protocols(db=db, user_id=current_user.id)
-        elif status == "completed":
-            print("Getting completed protocols")
-            protocols = get_completed_protocols(db=db, user_id=current_user.id)
-        else:
-            print("Getting all protocols")
-            protocols = get_protocols(db, skip=skip, limit=limit, status=status)
-
-        print(f"Found {len(protocols)} protocols")
-
-        # Convert protocols to response model
         response_protocols = []
         for protocol in protocols:
             try:
@@ -123,107 +98,48 @@ def list_protocols(
                 response_protocols.append(response_protocol)
             except Exception as e:
                 print(f"Error converting protocol to response model: {str(e)}")
-                # Skip this protocol
                 continue
 
-        print(f"Returning {len(response_protocols)} protocols")
         return response_protocols
     except Exception as e:
-        # Log any errors that occur
-        print(f"Error listing protocols: {str(e)}")
-        import traceback
-
-        traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error listing protocols: {str(e)}")
 
 
 @router.get("/{protocol_id}", response_model=ProtocolResponse)
-def get_protocol(protocol_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+def get_single_protocol(protocol_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """
     Get a specific protocol by ID.
     """
-    db_protocol = get_user_protocol(db=db, protocol_id=protocol_id)
+    db_protocol = get_protocol(db=db, protocol_id=protocol_id)
     if not db_protocol:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Protocol with ID {protocol_id} not found")
-
-    # Check if protocol belongs to current user
-    if str(db_protocol.user_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this protocol")
 
     return db_protocol
 
 
 @router.put("/{protocol_id}", response_model=ProtocolResponse)
-def update_protocol(
+def update_existing_protocol(
     protocol_id: str, protocol_update: ProtocolUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """
     Update a specific protocol.
     """
-    # Check if protocol exists and belongs to current user
-    db_protocol = get_user_protocol(db=db, protocol_id=protocol_id)
+    db_protocol = get_protocol(db=db, protocol_id=protocol_id)
     if not db_protocol:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Protocol with ID {protocol_id} not found")
 
-    if str(db_protocol.user_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this protocol")
-
-    # Update protocol
-    updated_protocol = update_user_protocol(db=db, protocol_id=protocol_id, protocol_update=protocol_update)
+    updated_protocol = update_protocol(db=db, protocol_id=protocol_id, protocol_update=protocol_update)
     return updated_protocol
 
 
 @router.delete("/{protocol_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_protocol(protocol_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+def delete_existing_protocol(protocol_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     """
     Delete a specific protocol.
     """
-    # Check if protocol exists and belongs to current user
-    db_protocol = get_user_protocol(db=db, protocol_id=protocol_id)
+    db_protocol = get_protocol(db=db, protocol_id=protocol_id)
     if not db_protocol:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Protocol with ID {protocol_id} not found")
 
-    if str(db_protocol.user_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this protocol")
-
-    # Delete protocol
-    delete_user_protocol(db=db, protocol_id=protocol_id)
+    delete_protocol(db=db, protocol_id=protocol_id)
     return None
-
-
-@router.post("/{protocol_id}/check-ins", response_model=CheckInResponse)
-def create_check_in(
-    protocol_id: str, check_in: CheckInCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
-    """
-    Create a check-in for a specific protocol.
-    """
-    # Check if protocol exists and belongs to current user
-    db_protocol = get_user_protocol(db=db, protocol_id=protocol_id)
-    if not db_protocol:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Protocol with ID {protocol_id} not found")
-
-    if str(db_protocol.user_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create check-ins for this protocol")
-
-    # Create check-in
-    db_check_in = create_protocol_check_in(db=db, protocol_id=protocol_id, check_in=check_in)
-    return db_check_in
-
-
-@router.get("/{protocol_id}/check-ins", response_model=List[CheckInResponse])
-def list_check_ins(protocol_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    """
-    List check-ins for a specific protocol.
-    """
-    # Check if protocol exists and belongs to current user
-    db_protocol = get_user_protocol(db=db, protocol_id=protocol_id)
-    if not db_protocol:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Protocol with ID {protocol_id} not found")
-
-    if str(db_protocol.user_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view check-ins for this protocol")
-
-    # Get check-ins
-    check_ins = get_protocol_check_ins(db=db, protocol_id=protocol_id)
-    return check_ins
