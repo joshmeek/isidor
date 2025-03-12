@@ -514,6 +514,10 @@ export interface UserProtocolProgress {
   target_metrics: string[];
 }
 
+export interface UserProtocolStatusUpdate {
+  status: string;
+}
+
 // Protocol API functions
 export async function getProtocols(): Promise<Protocol[]> {
   console.log('Fetching available protocols');
@@ -738,4 +742,16 @@ export async function checkApiHealth(): Promise<boolean> {
     console.error('API health check failed:', error);
     return false;
   }
+}
+
+export async function updateUserProtocolStatus(userProtocolId: string, status: string): Promise<UserProtocol> {
+  console.log(`Updating status for user protocol: ${userProtocolId} to ${status}`);
+  const statusUpdate: UserProtocolStatusUpdate = {
+    status
+  };
+  return authenticatedRequest<UserProtocol>(
+    `/api/v1/user-protocols/${userProtocolId}/status`,
+    'PUT',
+    statusUpdate
+  );
 } 

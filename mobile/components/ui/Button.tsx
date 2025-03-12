@@ -58,23 +58,26 @@ export function Button({
   textStyle,
   ...rest
 }: ButtonProps) {
-  // Get theme colors
+  // Get ALL theme colors at the top level
   const primaryColor = useThemeColor({}, 'primary') as string;
   const backgroundColor = useThemeColor({}, 'background') as string;
   const textColor = useThemeColor({}, 'text') as string;
   const errorColor = useThemeColor({}, 'error') as string;
+  const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary') as string;
+  const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary') as string;
+  const buttonTextColor = useThemeColor({}, 'buttonText') as string;
+  const buttonTextSecondaryColor = useThemeColor({}, 'buttonTextSecondary') as string;
 
   // Determine button styles based on variant and size
-  const getButtonStyles = (pressed: boolean) => {
+  const getButtonStyles = (pressed: boolean): StyleProp<ViewStyle>[] => {
     // Base styles
     const baseStyle: ViewStyle = {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 25, // Rounded corners like login screen
+      borderRadius: 25,
       opacity: disabled ? 0.5 : 1,
       ...(fullWidth ? { width: '100%' } : {}),
-      // Add shadow like login screen
       shadowColor: 'rgba(0, 0, 0, 0.1)',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 1,
@@ -92,7 +95,7 @@ export function Button({
       md: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
-        minHeight: 50, // Match login screen height
+        minHeight: 50,
       },
       lg: {
         paddingHorizontal: spacing.xl,
@@ -101,20 +104,20 @@ export function Button({
       },
     };
 
-    // Variant styles
+    // Variant styles - use pre-fetched colors
     const variantStyles: Record<ButtonVariant, ViewStyle> = {
       primary: {
-        backgroundColor: useThemeColor({}, 'buttonPrimary') as string,
+        backgroundColor: buttonPrimaryColor,
         borderWidth: 0,
       },
       secondary: {
-        backgroundColor: useThemeColor({}, 'buttonSecondary') as string,
+        backgroundColor: buttonSecondaryColor,
         borderWidth: 0,
       },
       outline: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: useThemeColor({}, 'buttonPrimary') as string,
+        borderColor: buttonPrimaryColor,
       },
       ghost: {
         backgroundColor: 'transparent',
@@ -126,7 +129,7 @@ export function Button({
         elevation: 0,
       },
       destructive: {
-        backgroundColor: useThemeColor({}, 'error') as string,
+        backgroundColor: errorColor,
         borderWidth: 0,
       },
     };
@@ -140,26 +143,26 @@ export function Button({
       baseStyle,
       sizeStyles[size],
       variantStyles[variant],
-      pressed && pressedStyles,
-      style,
+      pressed ? pressedStyles : {},
+      style || {},
     ];
   };
 
-  // Determine text color based on variant
+  // Determine text color based on variant - use pre-fetched colors
   const getTextColor = (): string => {
     switch (variant) {
       case 'primary':
-        return useThemeColor({}, 'buttonText') as string;
+        return buttonTextColor;
       case 'secondary':
-        return useThemeColor({}, 'buttonTextSecondary') as string;
+        return buttonTextSecondaryColor;
       case 'outline':
-        return useThemeColor({}, 'buttonPrimary') as string;
+        return buttonPrimaryColor;
       case 'ghost':
-        return useThemeColor({}, 'buttonPrimary') as string;
+        return buttonPrimaryColor;
       case 'destructive':
-        return useThemeColor({}, 'buttonText') as string;
+        return buttonTextColor;
       default:
-        return useThemeColor({}, 'buttonText') as string;
+        return buttonTextColor;
     }
   };
 
