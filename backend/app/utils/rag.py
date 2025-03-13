@@ -153,15 +153,12 @@ def retrieve_context_for_user(
                 "id": str(protocol.id),
                 "start_date": protocol.start_date.isoformat() if protocol.start_date else None,
                 "status": protocol.status,
+                "name": protocol.name,
+                "description": protocol.description,
+                "target_metrics": protocol.target_metrics,
+                "start_date": protocol.start_date,
+                "end_date": protocol.end_date,
             }
-
-            # Include protocol details if available
-            if hasattr(protocol, "protocol") and protocol.protocol:
-                protocol_dict["name"] = protocol.protocol.name
-                protocol_dict["description"] = protocol.protocol.description
-                protocol_dict["target_metrics"] = protocol.protocol.target_metrics
-                protocol_dict["duration_type"] = protocol.protocol.duration_type
-                protocol_dict["duration_days"] = protocol.protocol.duration_days
 
             protocol_data.append(protocol_dict)
 

@@ -416,11 +416,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: spacing.xl * 2,
+    paddingBottom: spacing['3xl'],
   },
   title: {
     marginBottom: spacing.md,
-    marginTop: Platform.OS === 'ios' ? spacing.xl : spacing.md,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
   },
   tabContainer: {
     flexDirection: 'row',

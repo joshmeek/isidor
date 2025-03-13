@@ -21,7 +21,8 @@ class HealthInsightRequest(BaseModel):
 
 class ProtocolRecommendationRequest(BaseModel):
     health_goal: str
-    current_metrics: List[str]
+    current_metrics: Optional[List[str]] = None
+    time_frame: Optional[TimeFrame] = None
 
 
 class TrendAnalysisRequest(BaseModel):
@@ -78,6 +79,7 @@ async def get_protocol_recommendation(
     Returns a response with:
     - protocol_recommendation: The AI-generated protocol recommendation
     - has_data: Boolean indicating if relevant health data was found
+    - has_active_protocols: Boolean indicating if the user has active protocols
     - metadata: Additional information about the request and response
     """
     # Ensure the user can only access their own protocol recommendations
@@ -85,8 +87,24 @@ async def get_protocol_recommendation(
         raise HTTPException(status_code=403, detail="Not authorized to access protocol recommendations for other users")
 
     try:
+        # If current_metrics is not provided, fetch all available metric types for the user
+        current_metrics = request.current_metrics
+        if current_metrics is None:
+            # You might need to implement a function to get all available metric types for a user
+            # For now, we'll use an empty list which will make the AI service consider all metrics
+            current_metrics = []
+        
+        # Use the provided time_frame or let the service use its default
+        time_frame_param = {}
+        if request.time_frame is not None:
+            time_frame_param["time_frame"] = request.time_frame
+        
         result = await generate_protocol_recommendation(
-            db=db, user_id=user_id, health_goal=request.health_goal, current_metrics=request.current_metrics
+            db=db, 
+            user_id=user_id, 
+            health_goal=request.health_goal, 
+            current_metrics=current_metrics,
+            **time_frame_param
         )
         return result
     except Exception as e:

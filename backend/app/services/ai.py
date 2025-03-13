@@ -206,7 +206,13 @@ Key insight provided: {insight}...
     return response_data
 
 
-async def generate_protocol_recommendation(db: Session, user_id: UUID, health_goal: str, current_metrics: List[str]) -> Dict[str, Any]:
+async def generate_protocol_recommendation(
+    db: Session, 
+    user_id: UUID, 
+    health_goal: str, 
+    current_metrics: Optional[List[str]] = None,
+    time_frame: TimeFrame = TimeFrame.LAST_WEEK
+) -> Dict[str, Any]:
     """
     Generate a protocol recommendation using Gemini AI.
 
@@ -214,7 +220,8 @@ async def generate_protocol_recommendation(db: Session, user_id: UUID, health_go
         db: Database session
         user_id: User ID
         health_goal: User's health goal
-        current_metrics: List of current metrics available
+        current_metrics: List of metric types to consider (if None, all available metrics will be considered)
+        time_frame: Time frame for analyzing recent health data (default: last week)
 
     Returns:
         Dictionary containing the protocol recommendation
@@ -222,23 +229,51 @@ async def generate_protocol_recommendation(db: Session, user_id: UUID, health_go
     # Get current datetime
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Retrieve relevant context using RAG
-    context = retrieve_context_for_user(db=db, user_id=user_id, query=health_goal, metric_types=current_metrics)
+    # If current_metrics is None or empty, we'll consider all metrics
+    # The RAG system will retrieve all available metrics for the user
+    metrics_for_query = current_metrics if current_metrics else None
+    
+    # Retrieve relevant context using RAG with the specified time frame
+    context = retrieve_context_for_user(
+        db=db, 
+        user_id=user_id, 
+        query=health_goal, 
+        metric_types=metrics_for_query,
+        time_frame=time_frame.value
+    )
 
-    # Check if we have any health metrics data for the requested types
-    has_health_data = False
+    # Get the actual metrics that were found in the data
     available_metrics = []
-    for metric_type in current_metrics:
-        if context["health_metrics"].get(metric_type, []):
-            has_health_data = True
-            available_metrics.append(metric_type)
-
+    has_health_data = False
+    
+    # Extract all metric types that have data
+    if context.get("health_metrics"):
+        for metric_type, data in context["health_metrics"].items():
+            if data:  # If there's data for this metric type
+                has_health_data = True
+                available_metrics.append(metric_type)
+    
+    # If current_metrics was provided, filter available_metrics to only include those
+    if current_metrics:
+        available_metrics = [m for m in available_metrics if m in current_metrics]
+        
     # Format context for prompt
     context_text = format_context_for_prompt(context)
 
     # Get existing AI memory if available
     ai_memory = get_ai_memory(db, user_id)
     memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
+
+    # Check if user has active protocols
+    has_active_protocols = bool(context.get("active_protocols"))
+    active_protocols_text = ""
+
+    if has_active_protocols:
+        active_protocols_text = "Active Protocols:\n"
+        for protocol in context["active_protocols"]:
+            active_protocols_text += f"- {protocol['name']}: {protocol['description']}\n"
+            active_protocols_text += f"  Target Metrics: {', '.join(protocol['target_metrics'])}\n"
+            active_protocols_text += f"  Status: {protocol['status']}\n"
 
     # Create the protocol recommendation prompt
     protocol_prompt = f"""
@@ -251,10 +286,40 @@ Current Date and Time: {current_datetime}
 {memory_context}
 
 User's Health Goal: {health_goal}
-Available Metrics: {', '.join(current_metrics)}
-Metrics with Data: {', '.join(available_metrics) if available_metrics else "None"}
+Available Metrics: {', '.join(available_metrics) if available_metrics else "None"}
+Time Frame Analyzed: {time_frame.value.replace('_', ' ')}
 
-{"Provide a concise protocol recommendation to help the user achieve their goal. Limit your response to 5-7 sentences that outline: (1) A clear objective, (2) Key metrics to track, (3) A suggested timeframe, and (4) How to measure progress. Be direct and specific." if has_health_data else "The user doesn't have relevant health data yet. In 2-3 sentences, suggest a basic protocol and what data they should start collecting to achieve their goal."}
+{active_protocols_text}
+
+"""
+
+    if not has_health_data:
+        protocol_prompt += """
+The user doesn't have relevant health data yet. In 2-3 sentences, suggest a basic protocol and what data they should start collecting to achieve their goal. Be specific about which metrics would be most valuable to track.
+"""
+    elif has_active_protocols:
+        protocol_prompt += """
+Provide a concise protocol recommendation to help the user achieve their goal, taking into account their existing active protocols. Limit your response to 5-7 sentences that outline:
+
+1. A clear objective that complements or extends their current protocols
+2. Key metrics to track (prioritize those that are already being collected)
+3. A suggested timeframe
+4. How to measure progress
+5. How this recommendation relates to their existing protocols (whether it enhances them or addresses gaps)
+
+Be direct, specific, and focus on actionable recommendations that build upon their current health journey.
+"""
+    else:
+        protocol_prompt += """
+Provide a concise protocol recommendation to help the user achieve their goal based on their recent health data. Limit your response to 5-7 sentences that outline:
+
+1. A clear objective
+2. Key metrics to track (prioritize those that are already being collected)
+3. A suggested timeframe
+4. How to measure progress
+5. Any specific patterns in their recent data that informed this recommendation
+
+Be direct and specific, focusing on actionable recommendations based on their actual health data.
 """
 
     # Generate response from Gemini
@@ -275,9 +340,10 @@ Metrics with Data: {', '.join(available_metrics) if available_metrics else "None
     # Update AI memory with this interaction
     memory_summary = f"""
 User requested: Protocol recommendation for health goal: {health_goal}
-Metrics requested: {', '.join(current_metrics)}
-Data available: {"Yes, for " + ', '.join(available_metrics) if available_metrics else "No"}
-Key recommendation provided: {protocol_recommendation[:200]}...
+Metrics available: {', '.join(available_metrics) if available_metrics else "None"}
+Data available: {"Yes" if has_health_data else "No"}
+Active protocols: {"Yes, " + str(len(context.get("active_protocols", []))) if has_active_protocols else "No"}
+Key recommendation provided: {protocol_recommendation}...
 """
     create_or_update_ai_memory(db, user_id, memory_summary)
 
@@ -285,11 +351,13 @@ Key recommendation provided: {protocol_recommendation[:200]}...
     return {
         "protocol_recommendation": protocol_recommendation,
         "has_data": has_health_data,
+        "has_active_protocols": has_active_protocols,
         "metadata": {
             "model": model_name,
             "health_goal": health_goal,
-            "metrics_requested": current_metrics,
             "metrics_available": available_metrics,
+            "time_frame": time_frame.value,
+            "active_protocol_count": len(context.get("active_protocols", [])),
             "has_memory": ai_memory is not None,
             "request_datetime": current_datetime,
         },
@@ -377,7 +445,7 @@ Current Date and Time: {current_datetime}
     memory_summary = f"""
 User requested: Analysis of {metric_type} trends for {time_period.value.replace('_', ' ')}
 Data available: {"Yes" if has_health_data else "No"}
-Key analysis provided: {trend_analysis[:200]}...
+Key analysis provided: {trend_analysis}...
 """
     create_or_update_ai_memory(db, user_id, memory_summary)
 
@@ -413,249 +481,249 @@ Key analysis provided: {trend_analysis[:200]}...
     return response_data
 
 
-async def analyze_protocol_effectiveness(
-    db: Session, user_id: UUID, protocol_id: UUID, user_protocol_id: UUID, effectiveness_data: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    Analyze the effectiveness of a protocol using Gemini AI.
+# async def analyze_protocol_effectiveness(
+#     db: Session, user_id: UUID, protocol_id: UUID, user_protocol_id: UUID, effectiveness_data: Dict[str, Any]
+# ) -> Dict[str, Any]:
+#     """
+#     Analyze the effectiveness of a protocol using Gemini AI.
 
-    Args:
-        db: Database session
-        user_id: User ID
-        protocol_id: Protocol ID
-        user_protocol_id: User Protocol ID
-        effectiveness_data: Protocol effectiveness data
+#     Args:
+#         db: Database session
+#         user_id: User ID
+#         protocol_id: Protocol ID
+#         user_protocol_id: User Protocol ID
+#         effectiveness_data: Protocol effectiveness data
 
-    Returns:
-        Dictionary containing the analysis
-    """
-    # Get current datetime
-    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#     Returns:
+#         Dictionary containing the analysis
+#     """
+#     # Get current datetime
+#     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Get protocol details
-    protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
-    if not protocol:
-        raise HTTPException(status_code=404, detail="Protocol not found")
+#     # Get protocol details
+#     protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
+#     if not protocol:
+#         raise HTTPException(status_code=404, detail="Protocol not found")
 
-    # Get user protocol details
-    user_protocol = db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
-    if not user_protocol:
-        raise HTTPException(status_code=404, detail="User protocol not found")
+#     # Get user protocol details
+#     user_protocol = db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
+#     if not user_protocol:
+#         raise HTTPException(status_code=404, detail="User protocol not found")
 
-    # Retrieve relevant context using RAG
-    context = retrieve_context_for_user(
-        db=db, user_id=user_id, query=f"Analyze the effectiveness of my {protocol.name} protocol", metric_types=protocol.target_metrics
-    )
+#     # Retrieve relevant context using RAG
+#     context = retrieve_context_for_user(
+#         db=db, user_id=user_id, query=f"Analyze the effectiveness of my {protocol.name} protocol", metric_types=protocol.target_metrics
+#     )
 
-    # Format context for prompt
-    context_text = format_context_for_prompt(context)
+#     # Format context for prompt
+#     context_text = format_context_for_prompt(context)
 
-    # Get existing AI memory if available
-    ai_memory = get_ai_memory(db, user_id)
-    memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
+#     # Get existing AI memory if available
+#     ai_memory = get_ai_memory(db, user_id)
+#     memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
 
-    # Format effectiveness data
-    effectiveness_text = "Protocol Effectiveness Data:\n"
-    for metric_type, data in effectiveness_data.items():
-        if metric_type != "overall":
-            effectiveness_text += f"- {metric_type.title()}:\n"
-            for key, value in data.items():
-                if isinstance(value, (int, float)):
-                    effectiveness_text += f"  - {key}: {value:.2f}\n"
-                else:
-                    effectiveness_text += f"  - {key}: {value}\n"
+#     # Format effectiveness data
+#     effectiveness_text = "Protocol Effectiveness Data:\n"
+#     for metric_type, data in effectiveness_data.items():
+#         if metric_type != "overall":
+#             effectiveness_text += f"- {metric_type.title()}:\n"
+#             for key, value in data.items():
+#                 if isinstance(value, (int, float)):
+#                     effectiveness_text += f"  - {key}: {value:.2f}\n"
+#                 else:
+#                     effectiveness_text += f"  - {key}: {value}\n"
 
-    # Add overall effectiveness
-    if "overall" in effectiveness_data:
-        effectiveness_text += "- Overall:\n"
-        for key, value in effectiveness_data["overall"].items():
-            if isinstance(value, (int, float)):
-                effectiveness_text += f"  - {key}: {value:.2f}\n"
-            else:
-                effectiveness_text += f"  - {key}: {value}\n"
+#     # Add overall effectiveness
+#     if "overall" in effectiveness_data:
+#         effectiveness_text += "- Overall:\n"
+#         for key, value in effectiveness_data["overall"].items():
+#             if isinstance(value, (int, float)):
+#                 effectiveness_text += f"  - {key}: {value:.2f}\n"
+#             else:
+#                 effectiveness_text += f"  - {key}: {value}\n"
 
-    # Create the analysis prompt
-    analysis_prompt = f"""
-{SYSTEM_PROMPT}
+#     # Create the analysis prompt
+#     analysis_prompt = f"""
+# {SYSTEM_PROMPT}
 
-Current Date and Time: {current_datetime}
+# Current Date and Time: {current_datetime}
 
-{context_text}
+# {context_text}
 
-{memory_context}
+# {memory_context}
 
-Protocol: {protocol.name}
-Description: {protocol.description}
-Target Metrics: {', '.join(protocol.target_metrics)}
-Duration Type: {protocol.duration_type}
-Duration Days: {protocol.duration_days if protocol.duration_days else 'Ongoing'}
-Start Date: {user_protocol.start_date}
-Status: {user_protocol.status}
+# Protocol: {protocol.name}
+# Description: {protocol.description}
+# Target Metrics: {', '.join(protocol.target_metrics)}
+# Duration Type: {protocol.duration_type}
+# Duration Days: {protocol.duration_days if protocol.duration_days else 'Ongoing'}
+# Start Date: {user_protocol.start_date}
+# Status: {user_protocol.status}
 
-{effectiveness_text}
+# {effectiveness_text}
 
-Provide a concise analysis of this protocol's effectiveness. Limit your response to 3-5 sentences that highlight the most significant results and areas for improvement. Focus only on what's directly observable in the data.
-"""
+# Provide a concise analysis of this protocol's effectiveness. Limit your response to 3-5 sentences that highlight the most significant results and areas for improvement. Focus only on what's directly observable in the data.
+# """
 
-    # Generate response from Gemini
-    model = genai.GenerativeModel(model_name)
-    response = await model.generate_content_async(
-        analysis_prompt,
-        generation_config={
-            "temperature": 0.2,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 300,  # Reduced to encourage brevity
-        },
-    )
+#     # Generate response from Gemini
+#     model = genai.GenerativeModel(model_name)
+#     response = await model.generate_content_async(
+#         analysis_prompt,
+#         generation_config={
+#             "temperature": 0.2,
+#             "top_p": 0.95,
+#             "top_k": 40,
+#             "max_output_tokens": 300,  # Reduced to encourage brevity
+#         },
+#     )
 
-    # Extract the response text
-    analysis = response.text
+#     # Extract the response text
+#     analysis = response.text
 
-    # Update AI memory with this interaction
-    memory_summary = f"""
-User requested: Analysis of {protocol.name} protocol effectiveness
-Protocol status: {user_protocol.status}
-Key analysis provided: {analysis[:200]}...
-"""
-    create_or_update_ai_memory(db, user_id, memory_summary)
+#     # Update AI memory with this interaction
+#     memory_summary = f"""
+# User requested: Analysis of {protocol.name} protocol effectiveness
+# Protocol status: {user_protocol.status}
+# Key analysis provided: {analysis}...
+# """
+#     create_or_update_ai_memory(db, user_id, memory_summary)
 
-    # Return the analysis
-    return {
-        "analysis": analysis,
-        "metadata": {
-            "model": model_name,
-            "protocol_name": protocol.name,
-            "protocol_id": str(protocol_id),
-            "user_protocol_id": str(user_protocol_id),
-            "has_memory": ai_memory is not None,
-            "request_datetime": current_datetime,
-        },
-    }
+#     # Return the analysis
+#     return {
+#         "analysis": analysis,
+#         "metadata": {
+#             "model": model_name,
+#             "protocol_name": protocol.name,
+#             "protocol_id": str(protocol_id),
+#             "user_protocol_id": str(user_protocol_id),
+#             "has_memory": ai_memory is not None,
+#             "request_datetime": current_datetime,
+#         },
+#     }
 
 
-async def generate_protocol_adjustments(
-    db: Session,
-    user_id: UUID,
-    protocol_id: UUID,
-    user_protocol_id: UUID,
-    effectiveness_data: Dict[str, Any],
-    recommendations_data: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Generate protocol adjustments using Gemini AI.
+# async def generate_protocol_adjustments(
+#     db: Session,
+#     user_id: UUID,
+#     protocol_id: UUID,
+#     user_protocol_id: UUID,
+#     effectiveness_data: Dict[str, Any],
+#     recommendations_data: Dict[str, Any],
+# ) -> Dict[str, Any]:
+#     """
+#     Generate protocol adjustments using Gemini AI.
 
-    Args:
-        db: Database session
-        user_id: User ID
-        protocol_id: Protocol ID
-        user_protocol_id: User Protocol ID
-        effectiveness_data: Protocol effectiveness data
-        recommendations_data: Protocol recommendations data
+#     Args:
+#         db: Database session
+#         user_id: User ID
+#         protocol_id: Protocol ID
+#         user_protocol_id: User Protocol ID
+#         effectiveness_data: Protocol effectiveness data
+#         recommendations_data: Protocol recommendations data
 
-    Returns:
-        Dictionary containing the protocol adjustments
-    """
-    # Get current datetime
-    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#     Returns:
+#         Dictionary containing the protocol adjustments
+#     """
+#     # Get current datetime
+#     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Get protocol details
-    protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
-    if not protocol:
-        raise HTTPException(status_code=404, detail="Protocol not found")
+#     # Get protocol details
+#     protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
+#     if not protocol:
+#         raise HTTPException(status_code=404, detail="Protocol not found")
 
-    # Get user protocol details
-    user_protocol = db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
-    if not user_protocol:
-        raise HTTPException(status_code=404, detail="User protocol not found")
+#     # Get user protocol details
+#     user_protocol = db.query(UserProtocol).filter(UserProtocol.id == user_protocol_id).first()
+#     if not user_protocol:
+#         raise HTTPException(status_code=404, detail="User protocol not found")
 
-    # Retrieve relevant context using RAG
-    context = retrieve_context_for_user(
-        db=db, user_id=user_id, query=f"Suggest adjustments for my {protocol.name} protocol", metric_types=protocol.target_metrics
-    )
+#     # Retrieve relevant context using RAG
+#     context = retrieve_context_for_user(
+#         db=db, user_id=user_id, query=f"Suggest adjustments for my {protocol.name} protocol", metric_types=protocol.target_metrics
+#     )
 
-    # Format context for prompt
-    context_text = format_context_for_prompt(context)
+#     # Format context for prompt
+#     context_text = format_context_for_prompt(context)
 
-    # Get existing AI memory if available
-    ai_memory = get_ai_memory(db, user_id)
-    memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
+#     # Get existing AI memory if available
+#     ai_memory = get_ai_memory(db, user_id)
+#     memory_context = f"Previous Context: {ai_memory.summary}" if ai_memory else ""
 
-    # Format effectiveness data
-    effectiveness_text = "Protocol Effectiveness Data:\n"
-    for metric_type, data in effectiveness_data.items():
-        if metric_type != "overall":
-            effectiveness_text += f"- {metric_type.title()}:\n"
-            for key, value in data.items():
-                if isinstance(value, (int, float)):
-                    effectiveness_text += f"  - {key}: {value:.2f}\n"
-                else:
-                    effectiveness_text += f"  - {key}: {value}\n"
+#     # Format effectiveness data
+#     effectiveness_text = "Protocol Effectiveness Data:\n"
+#     for metric_type, data in effectiveness_data.items():
+#         if metric_type != "overall":
+#             effectiveness_text += f"- {metric_type.title()}:\n"
+#             for key, value in data.items():
+#                 if isinstance(value, (int, float)):
+#                     effectiveness_text += f"  - {key}: {value:.2f}\n"
+#                 else:
+#                     effectiveness_text += f"  - {key}: {value}\n"
 
-    # Format recommendations data
-    recommendations_text = "Current Recommendations:\n"
-    for metric_type, recommendations in recommendations_data.items():
-        recommendations_text += f"- {metric_type.title()}:\n"
-        for recommendation in recommendations:
-            recommendations_text += f"  - {recommendation}\n"
+#     # Format recommendations data
+#     recommendations_text = "Current Recommendations:\n"
+#     for metric_type, recommendations in recommendations_data.items():
+#         recommendations_text += f"- {metric_type.title()}:\n"
+#         for recommendation in recommendations:
+#             recommendations_text += f"  - {recommendation}\n"
 
-    # Create the adjustments prompt
-    adjustments_prompt = f"""
-{SYSTEM_PROMPT}
+#     # Create the adjustments prompt
+#     adjustments_prompt = f"""
+# {SYSTEM_PROMPT}
 
-Current Date and Time: {current_datetime}
+# Current Date and Time: {current_datetime}
 
-{context_text}
+# {context_text}
 
-{memory_context}
+# {memory_context}
 
-Protocol: {protocol.name}
-Description: {protocol.description}
-Target Metrics: {', '.join(protocol.target_metrics)}
-Duration Type: {protocol.duration_type}
-Duration Days: {protocol.duration_days if protocol.duration_days else 'Ongoing'}
-Start Date: {user_protocol.start_date}
-Status: {user_protocol.status}
+# Protocol: {protocol.name}
+# Description: {protocol.description}
+# Target Metrics: {', '.join(protocol.target_metrics)}
+# Duration Type: {protocol.duration_type}
+# Duration Days: {protocol.duration_days if protocol.duration_days else 'Ongoing'}
+# Start Date: {user_protocol.start_date}
+# Status: {user_protocol.status}
 
-{effectiveness_text}
+# {effectiveness_text}
 
-{recommendations_text}
+# {recommendations_text}
 
-Provide 2-3 specific, actionable adjustments to improve this protocol based on the effectiveness data. Be direct and concise, focusing only on the most impactful changes. Each suggestion should be 1-2 sentences.
-"""
+# Provide 2-3 specific, actionable adjustments to improve this protocol based on the effectiveness data. Be direct and concise, focusing only on the most impactful changes. Each suggestion should be 1-2 sentences.
+# """
 
-    # Generate response from Gemini
-    model = genai.GenerativeModel(model_name)
-    response = await model.generate_content_async(
-        adjustments_prompt,
-        generation_config={
-            "temperature": 0.3,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 300,  # Reduced to encourage brevity
-        },
-    )
+#     # Generate response from Gemini
+#     model = genai.GenerativeModel(model_name)
+#     response = await model.generate_content_async(
+#         adjustments_prompt,
+#         generation_config={
+#             "temperature": 0.3,
+#             "top_p": 0.95,
+#             "top_k": 40,
+#             "max_output_tokens": 300,  # Reduced to encourage brevity
+#         },
+#     )
 
-    # Extract the response text
-    adjustments = response.text
+#     # Extract the response text
+#     adjustments = response.text
 
-    # Update AI memory with this interaction
-    memory_summary = f"""
-User requested: Adjustments for {protocol.name} protocol
-Protocol status: {user_protocol.status}
-Key adjustments provided: {adjustments[:200]}...
-"""
-    create_or_update_ai_memory(db, user_id, memory_summary)
+#     # Update AI memory with this interaction
+#     memory_summary = f"""
+# User requested: Adjustments for {protocol.name} protocol
+# Protocol status: {user_protocol.status}
+# Key adjustments provided: {adjustments}...
+# """
+#     create_or_update_ai_memory(db, user_id, memory_summary)
 
-    # Return the adjustments
-    return {
-        "adjustments": adjustments,
-        "metadata": {
-            "model": model_name,
-            "protocol_name": protocol.name,
-            "protocol_id": str(protocol_id),
-            "user_protocol_id": str(user_protocol_id),
-            "has_memory": ai_memory is not None,
-            "request_datetime": current_datetime,
-        },
-    }
+#     # Return the adjustments
+#     return {
+#         "adjustments": adjustments,
+#         "metadata": {
+#             "model": model_name,
+#             "protocol_name": protocol.name,
+#             "protocol_id": str(protocol_id),
+#             "user_protocol_id": str(user_protocol_id),
+#             "has_memory": ai_memory is not None,
+#             "request_datetime": current_datetime,
+#         },
+#     }
