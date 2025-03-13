@@ -1,6 +1,8 @@
 import os
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+from datetime import datetime
+from enum import Enum
 
 import google.generativeai as genai
 from app.models.protocol import Protocol
@@ -10,6 +12,17 @@ from app.services.ai_memory import create_or_update_ai_memory, get_ai_memory
 from app.utils.rag import format_context_for_prompt, retrieve_context_for_user
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
+
+# Define TimeFrame enum
+class TimeFrame(str, Enum):
+    LAST_DAY = "last_day"
+    LAST_WEEK = "last_week"
+    LAST_MONTH = "last_month"
+    LAST_3_MONTHS = "last_3_months"
+    LAST_6_MONTHS = "last_6_months"
+    LAST_YEAR = "last_year"
+
 
 # Configure the Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -38,8 +51,8 @@ async def generate_health_insight(
     query: str,
     metric_types: Optional[List[str]] = None,
     update_memory: bool = True,
-    time_frame: str = "last_day",
-    use_cache: bool = True,
+    time_frame: TimeFrame = TimeFrame.LAST_DAY,
+    use_cache: bool = False,
 ) -> Dict[str, Any]:
     """
     Generate health insights using Gemini AI.
@@ -50,12 +63,15 @@ async def generate_health_insight(
         query: User's query about their health
         metric_types: Optional list of metric types to filter by
         update_memory: Whether to update the AI memory with this interaction
-        time_frame: Time frame for the analysis (e.g., "last_day", "last_week")
+        time_frame: Time frame for the analysis (e.g., TimeFrame.LAST_DAY, TimeFrame.LAST_WEEK)
         use_cache: Whether to use cached responses
 
     Returns:
         Dictionary containing the health insight
     """
+    # Get current datetime
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     # Check cache first if enabled
     if use_cache:
         query_hash = generate_query_hash(query, metric_types, time_frame=time_frame)
@@ -86,7 +102,9 @@ async def generate_health_insight(
         insight_prompt = f"""
 {SYSTEM_PROMPT}
 
-The user has requested health insights for the {time_frame.replace('_', ' ')}, but there is no health data available.
+Current Date and Time: {current_datetime}
+
+The user has requested health insights for the {time_frame.value.replace('_', ' ')}, but there is no health data available.
 
 {memory_context}
 
@@ -99,11 +117,13 @@ Provide a brief, 2-3 sentence response acknowledging the lack of data and sugges
             insight_prompt = f"""
 {SYSTEM_PROMPT}
 
+Current Date and Time: {current_datetime}
+
 {context_text}
 
 {memory_context}
 
-Based on the health data from the {time_frame.replace('_', ' ')} and active protocols provided, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends related to the user's active protocols.
+Based on the health data from the {time_frame.value.replace('_', ' ')} and active protocols provided, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends related to the user's active protocols.
 
 Focus on:
 1. How the user's health metrics relate to their protocol goals
@@ -118,11 +138,13 @@ Be objective, direct, and focused on actionable insights related to their protoc
             insight_prompt = f"""
 {SYSTEM_PROMPT}
 
+Current Date and Time: {current_datetime}
+
 {context_text}
 
 {memory_context}
 
-Based on the health data from the {time_frame.replace('_', ' ')}, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends. Focus only on objective observations from the data without making assumptions.
+Based on the health data from the {time_frame.value.replace('_', ' ')}, generate a concise health insight. Limit your response to 3-5 sentences that highlight the most significant patterns or trends. Focus only on objective observations from the data without making assumptions.
 
 If specific metrics stand out (either positively or negatively), briefly mention them. If there are clear correlations between different metrics, note them concisely.
 """
@@ -144,8 +166,8 @@ If specific metrics stand out (either positively or negatively), briefly mention
 
     # Update AI memory with this interaction
     memory_summary = f"""
-User requested: Health insights for {time_frame.replace('_', ' ')} for {', '.join(metric_types) if metric_types else 'all metrics'}
-Key insight provided: {insight[:200]}...
+User requested: Health insights for {time_frame.value.replace('_', ' ')} for {', '.join(metric_types) if metric_types else 'all metrics'}
+Key insight provided: {insight}...
 """
     if update_memory:
         create_or_update_ai_memory(db, user_id, memory_summary)
@@ -159,8 +181,9 @@ Key insight provided: {insight[:200]}...
             "has_memory": ai_memory is not None,
             "has_active_protocols": has_active_protocols,
             "protocol_count": len(context.get("active_protocols", [])),
-            "time_frame": time_frame,
+            "time_frame": time_frame.value,
             "cached": False,
+            "request_datetime": current_datetime,
         },
         "has_data": has_health_data,
     }
@@ -196,6 +219,9 @@ async def generate_protocol_recommendation(db: Session, user_id: UUID, health_go
     Returns:
         Dictionary containing the protocol recommendation
     """
+    # Get current datetime
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     # Retrieve relevant context using RAG
     context = retrieve_context_for_user(db=db, user_id=user_id, query=health_goal, metric_types=current_metrics)
 
@@ -217,6 +243,8 @@ async def generate_protocol_recommendation(db: Session, user_id: UUID, health_go
     # Create the protocol recommendation prompt
     protocol_prompt = f"""
 {SYSTEM_PROMPT}
+
+Current Date and Time: {current_datetime}
 
 {context_text}
 
@@ -263,12 +291,13 @@ Key recommendation provided: {protocol_recommendation[:200]}...
             "metrics_requested": current_metrics,
             "metrics_available": available_metrics,
             "has_memory": ai_memory is not None,
+            "request_datetime": current_datetime,
         },
     }
 
 
 async def analyze_health_trends(
-    db: Session, user_id: UUID, metric_type: str, time_period: str = "last_month", use_cache: bool = True
+    db: Session, user_id: UUID, metric_type: str, time_period: TimeFrame = TimeFrame.LAST_MONTH, use_cache: bool = False
 ) -> Dict[str, Any]:
     """
     Analyze health trends for a specific metric using Gemini AI.
@@ -277,30 +306,33 @@ async def analyze_health_trends(
         db: Database session
         user_id: User ID
         metric_type: Type of health metric to analyze
-        time_period: Time period for analysis
+        time_period: Time period for analysis (e.g., TimeFrame.LAST_MONTH)
         use_cache: Whether to use cached responses
 
     Returns:
         Dictionary containing the trend analysis
     """
+    # Get current datetime
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     # Check cache first if enabled
     if use_cache:
-        query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period)
+        query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period.value)
         cached_response = get_cached_response(
-            db=db, user_id=user_id, endpoint="trend_analysis", time_frame=time_period, query_hash=query_hash
+            db=db, user_id=user_id, endpoint="trend_analysis", time_frame=time_period.value, query_hash=query_hash
         )
 
         if cached_response:
-            print(f"Using cached trend analysis for user {user_id}, metric {metric_type}, time_period {time_period}")
+            print(f"Using cached trend analysis for user {user_id}, metric {metric_type}, time_period {time_period.value}")
             return cached_response.response_data
 
     # Retrieve relevant context using RAG
     context = retrieve_context_for_user(
         db=db,
         user_id=user_id,
-        query=f"Analyze my {metric_type} trends for the {time_period}",
+        query=f"Analyze my {metric_type} trends for the {time_period.value}",
         metric_types=[metric_type],
-        time_frame=time_period,
+        time_frame=time_period.value,
     )
 
     # Check if we have any health metrics data for the requested type
@@ -317,11 +349,13 @@ async def analyze_health_trends(
     trend_prompt = f"""
 {SYSTEM_PROMPT}
 
+Current Date and Time: {current_datetime}
+
 {context_text}
 
 {memory_context}
 
-{"Provide a brief analysis of the trends in the user's " + metric_type + " data over the " + time_period.replace('_', ' ') + ". Limit your response to 3-5 sentences that highlight the most significant patterns or changes. Focus only on what's directly observable in the data." if has_health_data else "The user doesn't have any " + metric_type + " data for the " + time_period.replace('_', ' ') + ". In 1-2 sentences, acknowledge this and suggest what types of " + metric_type + " data would be helpful to collect."}
+{"Provide a brief analysis of the trends in the user's " + metric_type + " data over the " + time_period.value.replace('_', ' ') + ". Limit your response to 3-5 sentences that highlight the most significant patterns or changes. Focus only on what's directly observable in the data." if has_health_data else "The user doesn't have any " + metric_type + " data for the " + time_period.value.replace('_', ' ') + ". In 1-2 sentences, acknowledge this and suggest what types of " + metric_type + " data would be helpful to collect."}
 """
 
     # Generate response from Gemini
@@ -341,7 +375,7 @@ async def analyze_health_trends(
 
     # Update AI memory with this interaction
     memory_summary = f"""
-User requested: Analysis of {metric_type} trends for {time_period.replace('_', ' ')}
+User requested: Analysis of {metric_type} trends for {time_period.value.replace('_', ' ')}
 Data available: {"Yes" if has_health_data else "No"}
 Key analysis provided: {trend_analysis[:200]}...
 """
@@ -354,20 +388,21 @@ Key analysis provided: {trend_analysis[:200]}...
         "metadata": {
             "model": model_name,
             "metric_type": metric_type,
-            "time_period": time_period,
+            "time_period": time_period.value,
             "has_memory": ai_memory is not None,
             "cached": False,
+            "request_datetime": current_datetime,
         },
     }
 
     # Cache the response if enabled
     if use_cache:
-        query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period)
+        query_hash = generate_query_hash(f"Analyze my {metric_type} trends", metric_types=[metric_type], time_period=time_period.value)
         create_cached_response(
             db=db,
             user_id=user_id,
             endpoint="trend_analysis",
-            time_frame=time_period,
+            time_frame=time_period.value,
             query_hash=query_hash,
             response_data=response_data,
             metric_types=[metric_type],
@@ -394,6 +429,9 @@ async def analyze_protocol_effectiveness(
     Returns:
         Dictionary containing the analysis
     """
+    # Get current datetime
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     # Get protocol details
     protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
     if not protocol:
@@ -439,6 +477,8 @@ async def analyze_protocol_effectiveness(
     # Create the analysis prompt
     analysis_prompt = f"""
 {SYSTEM_PROMPT}
+
+Current Date and Time: {current_datetime}
 
 {context_text}
 
@@ -489,6 +529,7 @@ Key analysis provided: {analysis[:200]}...
             "protocol_id": str(protocol_id),
             "user_protocol_id": str(user_protocol_id),
             "has_memory": ai_memory is not None,
+            "request_datetime": current_datetime,
         },
     }
 
@@ -515,6 +556,9 @@ async def generate_protocol_adjustments(
     Returns:
         Dictionary containing the protocol adjustments
     """
+    # Get current datetime
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     # Get protocol details
     protocol = db.query(Protocol).filter(Protocol.id == protocol_id).first()
     if not protocol:
@@ -558,6 +602,8 @@ async def generate_protocol_adjustments(
     # Create the adjustments prompt
     adjustments_prompt = f"""
 {SYSTEM_PROMPT}
+
+Current Date and Time: {current_datetime}
 
 {context_text}
 
@@ -610,5 +656,6 @@ Key adjustments provided: {adjustments[:200]}...
             "protocol_id": str(protocol_id),
             "user_protocol_id": str(user_protocol_id),
             "has_memory": ai_memory is not None,
+            "request_datetime": current_datetime,
         },
     }

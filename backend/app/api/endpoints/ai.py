@@ -4,7 +4,7 @@ from uuid import UUID
 from app.api.endpoints.auth import get_current_active_user
 from app.db.session import get_db
 from app.schemas.user import User as UserSchema
-from app.services.ai import analyze_health_trends, generate_health_insight, generate_protocol_recommendation
+from app.services.ai import TimeFrame, analyze_health_trends, generate_health_insight, generate_protocol_recommendation
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ class HealthInsightRequest(BaseModel):
     query: str
     metric_types: Optional[List[str]] = None
     update_memory: bool = True
-    time_frame: str = "last_day"  # Options: "last_day", "last_week", "last_month"
+    time_frame: TimeFrame = TimeFrame.LAST_DAY
 
 
 class ProtocolRecommendationRequest(BaseModel):
@@ -26,8 +26,8 @@ class ProtocolRecommendationRequest(BaseModel):
 
 class TrendAnalysisRequest(BaseModel):
     metric_type: str
-    time_period: str = "last_month"  # Options: "last_day", "last_week", "last_month", "last_3_months", "last_6_months", "last_year"
-    use_cache: bool = True
+    time_period: TimeFrame = TimeFrame.LAST_WEEK
+    use_cache: bool = False
 
 
 @router.post("/insights/{user_id}", response_model=Dict[str, Any])
