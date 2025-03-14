@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, NativeModules } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from './ui';
 import useHealthKit from '@/hooks/useHealthKit';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+
+// Check if the native module is available
+const hasNativeModule = NativeModules.AppleHealthKit !== null && NativeModules.AppleHealthKit !== undefined;
 
 interface HealthKitSyncProps {
   onSync?: () => void;
@@ -50,6 +53,18 @@ const HealthKitSync: React.FC<HealthKitSyncProps> = ({ onSync }) => {
         <ThemedText style={styles.title}>Apple HealthKit</ThemedText>
         <ThemedText style={styles.message}>
           Apple HealthKit is only available on iOS devices.
+        </ThemedText>
+      </View>
+    );
+  }
+
+  // If the native module is not available, show a message
+  if (!hasNativeModule) {
+    return (
+      <View style={[styles.container, { backgroundColor }]}>
+        <ThemedText style={styles.title}>Apple HealthKit</ThemedText>
+        <ThemedText style={styles.error}>
+          HealthKit integration is not available.
         </ThemedText>
       </View>
     );
@@ -188,6 +203,17 @@ const styles = StyleSheet.create({
   error: {
     color: 'red',
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  codeBlock: {
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  code: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 12,
   },
   permissionButton: {
     paddingHorizontal: 16,

@@ -150,4 +150,5 @@ htmlcov/
 
 # Xcode iOS and shit
 **/ios/
+**/android/
 .expo/

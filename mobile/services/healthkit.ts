@@ -1,11 +1,12 @@
-import AppleHealthKit, {
-  HealthInputOptions,
-  HealthKitPermissions,
-  HealthUnit,
-  HealthValue,
-} from 'react-native-health';
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import { MetricType } from './api';
+
+// Import HealthKit correctly
+const HealthKit = require('react-native-health');
+
+// Check if the native module is available
+const hasNativeModule = NativeModules.AppleHealthKit !== null && NativeModules.AppleHealthKit !== undefined;
+console.log('Has AppleHealthKit native module:', hasNativeModule);
 
 // Define the types of health data we want to access
 export enum HealthDataType {
@@ -23,41 +24,53 @@ export enum HealthDataType {
 const permissions = {
   permissions: {
     read: [
-      AppleHealthKit.Constants.Permissions.Steps,
-      AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
-      AppleHealthKit.Constants.Permissions.FlightsClimbed,
-      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-      AppleHealthKit.Constants.Permissions.HeartRate,
-      AppleHealthKit.Constants.Permissions.SleepAnalysis,
-      AppleHealthKit.Constants.Permissions.Weight,
-      AppleHealthKit.Constants.Permissions.BodyFatPercentage,
+      'Steps',
+      'DistanceWalkingRunning',
+      'FlightsClimbed',
+      'ActiveEnergyBurned',
+      'HeartRate',
+      'SleepAnalysis',
+      'Weight',
+      'BodyFatPercentage',
     ],
-    write: [
-      // We're only reading data for now, but you can add write permissions if needed
-    ],
+    write: [],
   },
-} as HealthKitPermissions;
+};
 
 // Check if HealthKit is available (only on iOS)
 export const isHealthKitAvailable = (): boolean => {
-  return Platform.OS === 'ios';
+  return Platform.OS === 'ios' && hasNativeModule;
 };
 
 // Initialize HealthKit
 export const initHealthKit = (): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     if (!isHealthKitAvailable()) {
-      reject('HealthKit is only available on iOS');
+      const reason = Platform.OS !== 'ios' 
+        ? 'HealthKit is only available on iOS' 
+        : 'HealthKit native module is not available';
+      reject(reason);
       return;
     }
 
-    AppleHealthKit.initHealthKit(permissions, (error: string) => {
-      if (error) {
-        reject(`Error initializing HealthKit: ${error}`);
-        return;
-      }
-      resolve(true);
-    });
+    // Log what we're working with
+    console.log('HealthKit module:', HealthKit);
+    console.log('AppleHealthKit native module:', NativeModules.AppleHealthKit);
+    
+    try {
+      // Use the native module directly
+      NativeModules.AppleHealthKit.initHealthKit(permissions, (error: string) => {
+        if (error) {
+          console.error('Error initializing HealthKit:', error);
+          reject(`Error initializing HealthKit: ${error}`);
+          return;
+        }
+        resolve(true);
+      });
+    } catch (err) {
+      console.error('Exception initializing HealthKit:', err);
+      reject(`Exception initializing HealthKit: ${err}`);
+    }
   });
 };
 
@@ -69,11 +82,11 @@ export const getStepCount = (date: string = new Date().toISOString()): Promise<n
       return;
     }
 
-    const options: HealthInputOptions = {
+    const options = {
       date,
     };
 
-    AppleHealthKit.getStepCount(options, (error: string, results: HealthValue) => {
+    NativeModules.AppleHealthKit.getStepCount(options, (error: string, results: any) => {
       if (error) {
         reject(`Error getting step count: ${error}`);
         return;
@@ -91,12 +104,12 @@ export const getDistanceWalkingRunning = (date: string = new Date().toISOString(
       return;
     }
 
-    const options: HealthInputOptions = {
+    const options = {
       date,
-      unit: HealthUnit.meter,
+      unit: 'meter',
     };
 
-    AppleHealthKit.getDistanceWalkingRunning(options, (error: string, results: HealthValue) => {
+    NativeModules.AppleHealthKit.getDistanceWalkingRunning(options, (error: string, results: any) => {
       if (error) {
         reject(`Error getting distance: ${error}`);
         return;
@@ -114,11 +127,11 @@ export const getFlightsClimbed = (date: string = new Date().toISOString()): Prom
       return;
     }
 
-    const options: HealthInputOptions = {
+    const options = {
       date,
     };
 
-    AppleHealthKit.getFlightsClimbed(options, (error: string, results: HealthValue) => {
+    NativeModules.AppleHealthKit.getFlightsClimbed(options, (error: string, results: any) => {
       if (error) {
         reject(`Error getting flights climbed: ${error}`);
         return;
@@ -136,12 +149,12 @@ export const getActiveEnergyBurned = (date: string = new Date().toISOString()): 
       return;
     }
 
-    const options: HealthInputOptions = {
+    const options = {
       date,
-      unit: HealthUnit.kilocalorie,
+      unit: 'kilocalorie',
     };
 
-    AppleHealthKit.getActiveEnergyBurned(options, (error: string, results: any) => {
+    NativeModules.AppleHealthKit.getActiveEnergyBurned(options, (error: string, results: any) => {
       if (error) {
         reject(`Error getting active energy burned: ${error}`);
         return;
@@ -169,7 +182,7 @@ export const getHeartRateSamples = (
       ascending: false,
     };
 
-    AppleHealthKit.getHeartRateSamples(options, (error: string, results: any[]) => {
+    NativeModules.AppleHealthKit.getHeartRateSamples(options, (error: string, results: any[]) => {
       if (error) {
         reject(`Error getting heart rate samples: ${error}`);
         return;
@@ -197,7 +210,7 @@ export const getSleepSamples = (
       ascending: false,
     };
 
-    AppleHealthKit.getSleepSamples(options, (error: string, results: any[]) => {
+    NativeModules.AppleHealthKit.getSleepSamples(options, (error: string, results: any[]) => {
       if (error) {
         reject(`Error getting sleep samples: ${error}`);
         return;
@@ -221,12 +234,12 @@ export const getWeightSamples = (
     const options = {
       startDate,
       endDate,
-      unit: HealthUnit.pound,
+      unit: 'pound',
       limit: 100,
       ascending: false,
     };
 
-    AppleHealthKit.getWeightSamples(options, (error: string, results: any[]) => {
+    NativeModules.AppleHealthKit.getWeightSamples(options, (error: string, results: any[]) => {
       if (error) {
         reject(`Error getting weight samples: ${error}`);
         return;
@@ -254,7 +267,7 @@ export const getBodyFatPercentageSamples = (
       ascending: false,
     };
 
-    AppleHealthKit.getBodyFatPercentageSamples(options, (error: string, results: any[]) => {
+    NativeModules.AppleHealthKit.getBodyFatPercentageSamples(options, (error: string, results: any[]) => {
       if (error) {
         reject(`Error getting body fat percentage samples: ${error}`);
         return;
