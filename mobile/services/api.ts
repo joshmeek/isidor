@@ -10,7 +10,7 @@ export type UUID = string;
 
 // IMPORTANT: If you're testing on a physical device, replace this with your computer's actual IP address
 // Example: const MANUAL_IP = '192.168.1.123';
-const MANUAL_IP = '192.168.0.48'; // Set to null to use automatic detection, or set to your IP as a string
+const MANUAL_IP = '192.168.0.39'; // Set to null to use automatic detection, or set to your IP as a string
 
 const getApiUrl = () => {
   // If manual IP is set, use it for all devices

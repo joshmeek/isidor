@@ -147,3 +147,7 @@ htmlcov/
 .envrc
 .tool-versions
 .devcontainer/
+
+# Xcode iOS and shit
+**/ios/
+.expo/

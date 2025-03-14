@@ -8,6 +8,7 @@ import * as api from '@/services/api';
 import { MetricType } from '@/services/api';
 import { spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import HealthKitSync from '@/components/HealthKitSync';
 
 // Types for health metrics
 interface HealthMetric {
@@ -1090,90 +1091,97 @@ export default function HealthScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            colors={[primaryColor as string]} 
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        <ThemedText variant="displaySmall" style={styles.title}>
-          Health Metrics
-        </ThemedText>
-        
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === 'view' && styles.activeTabButton,
-              { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
-            ]}
-            onPress={() => setActiveTab('view')}
-          >
-            <ThemedText
-              variant="labelMedium"
-              style={[
-                styles.tabButtonText,
-                activeTab === 'view' && styles.activeTabButtonText,
-              ]}
-            >
-              View Data
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === 'add' && styles.activeTabButton,
-              { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
-            ]}
-            onPress={() => setActiveTab('add')}
-          >
-            <ThemedText
-              variant="labelMedium"
-              style={[
-                styles.tabButtonText,
-                activeTab === 'add' && styles.activeTabButtonText,
-              ]}
-            >
-              Add Data
-            </ThemedText>
-          </TouchableOpacity>
+      {isLoading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={primaryColor} />
+          <ThemedText variant="bodyMedium" style={styles.loadingText}>
+            Loading health data...
+          </ThemedText>
         </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh} 
+              colors={[primaryColor as string]} 
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          <ThemedText variant="displaySmall" style={styles.title}>
+            Health Metrics
+          </ThemedText>
+          
+          {/* Add HealthKit Sync Component */}
+          {Platform.OS === 'ios' && (
+            <HealthKitSync onSync={onRefresh} />
+          )}
+          
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'view' && styles.activeTabButton,
+                { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
+              ]}
+              onPress={() => setActiveTab('view')}
+            >
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.tabButtonText,
+                  activeTab === 'view' && styles.activeTabButtonText,
+                ]}
+              >
+                View Data
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'add' && styles.activeTabButton,
+                { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
+              ]}
+              onPress={() => setActiveTab('add')}
+            >
+              <ThemedText
+                variant="labelMedium"
+                style={[
+                  styles.tabButtonText,
+                  activeTab === 'add' && styles.activeTabButtonText,
+                ]}
+              >
+                Add Data
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
 
-        {activeTab === 'view' ? (
-          isLoading && !refreshing ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={primaryColor as string} />
-              <ThemedText variant="bodyMedium" style={styles.loadingText}>
-                Loading health data...
-              </ThemedText>
-            </View>
-          ) : error ? (
-            <Card style={styles.errorCard}>
-              <ThemedText variant="bodyMedium" style={styles.errorText}>
-                {error}
-              </ThemedText>
-              <Button 
-                title="Retry" 
-                onPress={loadData} 
-                variant="primary"
-                size="sm"
-                leftIcon="refresh"
-                style={styles.retryButton}
-              />
-            </Card>
+          {activeTab === 'view' ? (
+            error ? (
+              <Card style={styles.errorCard}>
+                <ThemedText variant="bodyMedium" style={styles.errorText}>
+                  {error}
+                </ThemedText>
+                <Button 
+                  title="Retry" 
+                  onPress={loadData} 
+                  variant="primary"
+                  size="sm"
+                  leftIcon="refresh"
+                  style={styles.retryButton}
+                />
+              </Card>
+            ) : (
+              renderHealthMetrics()
+            )
           ) : (
-            renderHealthMetrics()
-          )
-        ) : (
-          renderAddForm()
-        )}
-      </ScrollView>
+            renderAddForm()
+          )}
+        </ScrollView>
+      )}
     </ThemedView>
   );
 }

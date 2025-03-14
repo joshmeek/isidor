@@ -9,13 +9,19 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "This app requires access to your health data to track your fitness progress and provide personalized health insights.",
+        "NSHealthUpdateUsageDescription": "This app requires permission to save health data to HealthKit to keep your health information up to date."
+      },
+      "bundleIdentifier": "com.anonymous.isidor"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.anonymous.isidor"
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +37,14 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": true,
+          "healthSharePermission": "This app requires access to your health data to track your fitness progress and provide personalized health insights.",
+          "healthUpdatePermission": "This app requires permission to save health data to HealthKit to keep your health information up to date."
         }
       ]
     ],
