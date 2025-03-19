@@ -29,6 +29,52 @@ interface HealthMetricInput {
   user_id: string;
 }
 
+// Define health categories
+const HEALTH_CATEGORIES = [
+  {
+    id: 'activity',
+    name: 'Activity',
+    icon: 'fitness' as const,
+    color: '#FF9500',
+    type: MetricType.ACTIVITY,
+  },
+  {
+    id: 'body',
+    name: 'Body Measurements',
+    icon: 'body' as const,
+    color: '#AF52DE',
+    type: MetricType.WEIGHT,
+  },
+  {
+    id: 'heart',
+    name: 'Heart',
+    icon: 'heart' as const,
+    color: '#FF2D55',
+    type: MetricType.HEART_RATE,
+  },
+  {
+    id: 'nutrition',
+    name: 'Nutrition',
+    icon: 'restaurant' as const,
+    color: '#34C759',
+    type: MetricType.CALORIES,
+  },
+  {
+    id: 'sleep',
+    name: 'Sleep',
+    icon: 'moon' as const,
+    color: '#5E5CE6',
+    type: MetricType.SLEEP,
+  },
+  {
+    id: 'other',
+    name: 'Other Data',
+    icon: 'add-circle' as const,
+    color: '#007AFF',
+    type: MetricType.EVENT,
+  },
+];
+
 export default function HealthScreen() {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState<HealthMetric[]>([]);
@@ -36,6 +82,7 @@ export default function HealthScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'view' | 'add'>('view');
+  const [showAddForm, setShowAddForm] = useState(false);
   
   // Get URL parameters
   const params = useLocalSearchParams();
@@ -308,500 +355,51 @@ export default function HealthScreen() {
     setEventIntensity('');
   };
 
-  // Render the form to add new health metrics
-  const renderAddForm = () => {
+  // Render the browse/categories view
+  const renderBrowseView = () => {
     return (
-      <Card style={styles.formContainer}>
-        <View style={styles.formSection}>
-          <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-            Metric Type
-          </ThemedText>
-          <View style={styles.metricTypeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.metricTypeButton,
-                metricType === MetricType.SLEEP && styles.metricTypeButtonActive,
-              ]}
-              onPress={() => setMetricType(MetricType.SLEEP)}
-            >
-              <Ionicons 
-                name="moon" 
-                size={24} 
-                color={metricType === MetricType.SLEEP ? '#fff' : '#5E5CE6'} 
-              />
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.metricTypeButtonText,
-                  metricType === MetricType.SLEEP && styles.metricTypeButtonTextActive,
-                  { color: metricType === MetricType.SLEEP ? '#fff' : '#5E5CE6' }
-                ]}
-              >
-                Sleep
-              </ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.metricTypeButton,
-                metricType === MetricType.ACTIVITY && styles.metricTypeButtonActive,
-                { borderColor: '#FF9500' }
-              ]}
-              onPress={() => setMetricType(MetricType.ACTIVITY)}
-            >
-              <Ionicons 
-                name="footsteps" 
-                size={24} 
-                color={metricType === MetricType.ACTIVITY ? '#fff' : '#FF9500'} 
-              />
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.metricTypeButtonText,
-                  metricType === MetricType.ACTIVITY && styles.metricTypeButtonTextActive,
-                  { color: metricType === MetricType.ACTIVITY ? '#fff' : '#FF9500' }
-                ]}
-              >
-                Activity
-              </ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.metricTypeButton,
-                metricType === MetricType.HEART_RATE && styles.metricTypeButtonActive,
-                { borderColor: '#FF2D55' }
-              ]}
-              onPress={() => setMetricType(MetricType.HEART_RATE)}
-            >
-              <Ionicons 
-                name="heart" 
-                size={24} 
-                color={metricType === MetricType.HEART_RATE ? '#fff' : '#FF2D55'} 
-              />
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.metricTypeButtonText,
-                  metricType === MetricType.HEART_RATE && styles.metricTypeButtonTextActive,
-                  { color: metricType === MetricType.HEART_RATE ? '#fff' : '#FF2D55' }
-                ]}
-              >
-                Heart Rate
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.metricTypeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.metricTypeButton,
-                metricType === MetricType.WEIGHT && styles.metricTypeButtonActive,
-                { borderColor: '#AF52DE' }
-              ]}
-              onPress={() => setMetricType(MetricType.WEIGHT)}
-            >
-              <Ionicons 
-                name="fitness" 
-                size={24} 
-                color={metricType === MetricType.WEIGHT ? '#fff' : '#AF52DE'} 
-              />
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.metricTypeButtonText,
-                  metricType === MetricType.WEIGHT && styles.metricTypeButtonTextActive,
-                  { color: metricType === MetricType.WEIGHT ? '#fff' : '#AF52DE' }
-                ]}
-              >
-                Weight
-              </ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.metricTypeButton,
-                metricType === MetricType.CALORIES && styles.metricTypeButtonActive,
-                { borderColor: '#34C759' }
-              ]}
-              onPress={() => setMetricType(MetricType.CALORIES)}
-            >
-              <Ionicons 
-                name="restaurant" 
-                size={24} 
-                color={metricType === MetricType.CALORIES ? '#fff' : '#34C759'} 
-              />
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.metricTypeButtonText,
-                  metricType === MetricType.CALORIES && styles.metricTypeButtonTextActive,
-                  { color: metricType === MetricType.CALORIES ? '#fff' : '#34C759' }
-                ]}
-              >
-                Calories
-              </ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.metricTypeButton,
-                metricType === MetricType.EVENT && styles.metricTypeButtonActive,
-                { borderColor: '#007AFF' }
-              ]}
-              onPress={() => setMetricType(MetricType.EVENT)}
-            >
-              <Ionicons 
-                name="calendar" 
-                size={24} 
-                color={metricType === MetricType.EVENT ? '#fff' : '#007AFF'} 
-              />
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.metricTypeButtonText,
-                  metricType === MetricType.EVENT && styles.metricTypeButtonTextActive,
-                  { color: metricType === MetricType.EVENT ? '#fff' : '#007AFF' }
-                ]}
-              >
-                Event
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-        
-        <View style={styles.formSection}>
-          <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-            Date
-          </ThemedText>
-          <View style={styles.inputContainer}>
+      <View style={styles.browseContainer}>
+        {/* Search bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
             <TextInput
-              label="Date (YYYY-MM-DD)"
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              helper="Format: YYYY-MM-DD (e.g., 2023-10-15)"
+              placeholder="Search health categories"
+              style={styles.searchInput}
+              placeholderTextColor="#999"
             />
+            <Ionicons name="mic" size={20} color="#999" style={styles.micIcon} />
           </View>
         </View>
-        
-        {metricType === MetricType.SLEEP && (
-          <View style={styles.formSection}>
-            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-              Sleep Details
-            </ThemedText>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Duration (hours)"
-                value={sleepDuration}
-                onChangeText={setSleepDuration}
-                placeholder="7.5"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Deep Sleep (hours)"
-                value={deepSleep}
-                onChangeText={setDeepSleep}
-                placeholder="1.5"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="REM Sleep (hours)"
-                value={remSleep}
-                onChangeText={setRemSleep}
-                placeholder="2.0"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Sleep Score (0-100)"
-                value={sleepScore}
-                onChangeText={setSleepScore}
-                placeholder="85"
-                keyboardType="number-pad"
-              />
-            </View>
-          </View>
-        )}
-        
-        {metricType === MetricType.ACTIVITY && (
-          <View style={styles.formSection}>
-            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-              Activity Details
-            </ThemedText>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Steps"
-                value={steps}
-                onChangeText={setSteps}
-                placeholder="10000"
-                keyboardType="number-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Active Calories"
-                value={activeCalories}
-                onChangeText={setActiveCalories}
-                placeholder="350"
-                keyboardType="number-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Active Minutes"
-                value={activeMinutes}
-                onChangeText={setActiveMinutes}
-                placeholder="45"
-                keyboardType="number-pad"
-              />
-            </View>
-          </View>
-        )}
-        
-        {metricType === MetricType.HEART_RATE && (
-          <View style={styles.formSection}>
-            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-              Heart Rate Details
-            </ThemedText>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Resting Heart Rate (bpm)"
-                value={restingHr}
-                onChangeText={setRestingHr}
-                placeholder="65"
-                keyboardType="number-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Heart Rate Variability (ms)"
-                value={hrv}
-                onChangeText={setHrv}
-                placeholder="45"
-                keyboardType="decimal-pad"
-              />
-            </View>
-          </View>
-        )}
 
-        {metricType === MetricType.WEIGHT && (
-          <View style={styles.formSection}>
-            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-              Weight Details
-            </ThemedText>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Weight (lbs/kg)"
-                value={weight}
-                onChangeText={setWeight}
-                placeholder="150"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Body Fat Percentage (%)"
-                value={bodyFatPercentage}
-                onChangeText={setBodyFatPercentage}
-                placeholder="20"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Muscle Mass (lbs/kg)"
-                value={muscleMass}
-                onChangeText={setMuscleMass}
-                placeholder="65"
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Water Percentage (%)"
-                value={waterPercentage}
-                onChangeText={setWaterPercentage}
-                placeholder="60"
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Bone Mass (lbs/kg)"
-                value={boneMass}
-                onChangeText={setBoneMass}
-                placeholder="3.5"
-                keyboardType="decimal-pad"
-              />
-            </View>
-          </View>
-        )}
-
-        {metricType === MetricType.CALORIES && (
-          <View style={styles.formSection}>
-            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-              Calories Details
-            </ThemedText>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Total Calories"
-                value={totalCalories}
-                onChangeText={setTotalCalories}
-                placeholder="500"
-                keyboardType="number-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Protein (g)"
-                value={protein}
-                onChangeText={setProtein}
-                placeholder="25"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Fat (g)"
-                value={fat}
-                onChangeText={setFat}
-                placeholder="15"
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Carbs (g)"
-                value={carbs}
-                onChangeText={setCarbs}
-                placeholder="60"
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Meal Type"
-                value={mealType}
-                onChangeText={setMealType}
-                placeholder="Breakfast, Lunch, Dinner, Snack"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Meal Name"
-                value={mealName}
-                onChangeText={setMealName}
-                placeholder="Chicken Salad"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Notes"
-                value={caloriesNotes}
-                onChangeText={setCaloriesNotes}
-                placeholder="Additional details about the meal"
-                multiline
-              />
-            </View>
-          </View>
-        )}
-
-        {metricType === MetricType.EVENT && (
-          <View style={styles.formSection}>
-            <ThemedText variant="headingMedium" style={styles.formSectionTitle}>
-              Event Details
-            </ThemedText>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Event Type"
-                value={eventType}
-                onChangeText={setEventType}
-                placeholder="Alcohol, Travel, Stress, etc."
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Duration (minutes)"
-                value={eventDuration}
-                onChangeText={setEventDuration}
-                placeholder="60"
-                keyboardType="number-pad"
-              />
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Intensity (1-10)"
-                value={eventIntensity}
-                onChangeText={setEventIntensity}
-                placeholder="5"
-                keyboardType="number-pad"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
-                label="Notes"
-                value={eventNotes}
-                onChangeText={setEventNotes}
-                placeholder="Additional details about the event"
-                multiline
-              />
-            </View>
-          </View>
-        )}
-        
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Add Health Metric"
-            onPress={submitHealthMetric}
-            disabled={isLoading}
-            isLoading={isLoading}
-            variant="primary"
-            fullWidth
-          />
+        {/* Categories section */}
+        <View style={styles.categoriesSection}>
+          <ThemedText variant="headingMedium" style={styles.sectionTitle}>
+            Health Categories
+          </ThemedText>
           
-          <Button
-            title="Cancel"
-            onPress={() => {
-              resetFormFields();
-              setActiveTab('view');
-            }}
-            disabled={isLoading}
-            variant="outline"
-            fullWidth
-          />
+          <View style={styles.categoriesGrid}>
+            {HEALTH_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.categoryCard}
+                onPress={() => {
+                  setMetricType(category.type);
+                  setActiveTab('add');
+                }}
+              >
+                <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
+                  <Ionicons name={category.icon as any} size={24} color={category.color} />
+                </View>
+                <ThemedText variant="bodyMedium" style={styles.categoryName}>
+                  {category.name}
+                </ThemedText>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </Card>
+      </View>
     );
   };
 
@@ -1089,6 +687,361 @@ export default function HealthScreen() {
     );
   };
 
+  // Render the browse/categories view for adding data
+  const renderAddDataCategories = () => {
+    return (
+      <View style={styles.browseContainer}>
+        <View style={styles.categoriesSection}>
+          <ThemedText variant="headingMedium" style={styles.sectionTitle}>
+            Add Health Data
+          </ThemedText>
+          
+          <View style={styles.categoriesGrid}>
+            {HEALTH_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={styles.categoryCard}
+                onPress={() => {
+                  setMetricType(category.type);
+                  setShowAddForm(true);
+                }}
+              >
+                <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
+                  <Ionicons name={category.icon as any} size={24} color={category.color} />
+                </View>
+                <ThemedText variant="bodyMedium" style={styles.categoryName}>
+                  {category.name}
+                </ThemedText>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // Render the form to add new health metrics
+  const renderAddForm = () => {
+    const selectedCategory = HEALTH_CATEGORIES.find(cat => cat.type === metricType);
+    
+    return (
+      <Card style={styles.formContainer}>
+        {/* Back button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setShowAddForm(false)}
+        >
+          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          <ThemedText style={styles.backButtonText}>Categories</ThemedText>
+        </TouchableOpacity>
+
+        <View style={styles.formSection}>
+          <View style={styles.formHeader}>
+            <View style={[styles.categoryIcon, { backgroundColor: `${selectedCategory?.color}20` }]}>
+              <Ionicons name={selectedCategory?.icon as any} size={24} color={selectedCategory?.color} />
+            </View>
+            <ThemedText variant="headingMedium" style={styles.formTitle}>
+              {selectedCategory?.name}
+            </ThemedText>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <TextInput
+              label="Date (YYYY-MM-DD)"
+              value={date}
+              onChangeText={setDate}
+              placeholder="YYYY-MM-DD"
+              helper="Format: YYYY-MM-DD (e.g., 2023-10-15)"
+            />
+          </View>
+        </View>
+        
+        {metricType === MetricType.SLEEP && (
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Duration (hours)"
+                value={sleepDuration}
+                onChangeText={setSleepDuration}
+                placeholder="7.5"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Deep Sleep (hours)"
+                value={deepSleep}
+                onChangeText={setDeepSleep}
+                placeholder="1.5"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="REM Sleep (hours)"
+                value={remSleep}
+                onChangeText={setRemSleep}
+                placeholder="2.0"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Sleep Score (0-100)"
+                value={sleepScore}
+                onChangeText={setSleepScore}
+                placeholder="85"
+                keyboardType="number-pad"
+              />
+            </View>
+          </View>
+        )}
+        
+        {metricType === MetricType.ACTIVITY && (
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Steps"
+                value={steps}
+                onChangeText={setSteps}
+                placeholder="10000"
+                keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Active Calories"
+                value={activeCalories}
+                onChangeText={setActiveCalories}
+                placeholder="350"
+                keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Active Minutes"
+                value={activeMinutes}
+                onChangeText={setActiveMinutes}
+                placeholder="45"
+                keyboardType="number-pad"
+              />
+            </View>
+          </View>
+        )}
+        
+        {metricType === MetricType.HEART_RATE && (
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Resting Heart Rate (bpm)"
+                value={restingHr}
+                onChangeText={setRestingHr}
+                placeholder="65"
+                keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Heart Rate Variability (ms)"
+                value={hrv}
+                onChangeText={setHrv}
+                placeholder="45"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+        )}
+
+        {metricType === MetricType.WEIGHT && (
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Weight (lbs/kg)"
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="150"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Body Fat Percentage (%)"
+                value={bodyFatPercentage}
+                onChangeText={setBodyFatPercentage}
+                placeholder="20"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Muscle Mass (lbs/kg)"
+                value={muscleMass}
+                onChangeText={setMuscleMass}
+                placeholder="65"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Water Percentage (%)"
+                value={waterPercentage}
+                onChangeText={setWaterPercentage}
+                placeholder="60"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Bone Mass (lbs/kg)"
+                value={boneMass}
+                onChangeText={setBoneMass}
+                placeholder="3.5"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+        )}
+
+        {metricType === MetricType.CALORIES && (
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Total Calories"
+                value={totalCalories}
+                onChangeText={setTotalCalories}
+                placeholder="500"
+                keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Protein (g)"
+                value={protein}
+                onChangeText={setProtein}
+                placeholder="25"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Fat (g)"
+                value={fat}
+                onChangeText={setFat}
+                placeholder="15"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Carbs (g)"
+                value={carbs}
+                onChangeText={setCarbs}
+                placeholder="60"
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Meal Type"
+                value={mealType}
+                onChangeText={setMealType}
+                placeholder="Breakfast, Lunch, Dinner, Snack"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Meal Name"
+                value={mealName}
+                onChangeText={setMealName}
+                placeholder="Chicken Salad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Notes"
+                value={caloriesNotes}
+                onChangeText={setCaloriesNotes}
+                placeholder="Additional details about the meal"
+                multiline
+              />
+            </View>
+          </View>
+        )}
+
+        {metricType === MetricType.EVENT && (
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Event Type"
+                value={eventType}
+                onChangeText={setEventType}
+                placeholder="Alcohol, Travel, Stress, etc."
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Duration (minutes)"
+                value={eventDuration}
+                onChangeText={setEventDuration}
+                placeholder="60"
+                keyboardType="number-pad"
+              />
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Intensity (1-10)"
+                value={eventIntensity}
+                onChangeText={setEventIntensity}
+                placeholder="5"
+                keyboardType="number-pad"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Notes"
+                value={eventNotes}
+                onChangeText={setEventNotes}
+                placeholder="Additional details about the event"
+                multiline
+              />
+            </View>
+          </View>
+        )}
+        
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Add Health Metric"
+            onPress={submitHealthMetric}
+            disabled={isLoading}
+            isLoading={isLoading}
+            variant="primary"
+            fullWidth
+          />
+        </View>
+      </Card>
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
       <BackgroundGradient />
@@ -1109,7 +1062,53 @@ export default function HealthScreen() {
           </View>
         </TouchableOpacity>
       </View>
-      
+
+      {/* Tab Switcher */}
+      <View style={styles.timePeriodSelector}>
+        <TouchableOpacity
+          style={[
+            styles.periodButton,
+            activeTab === 'view' && styles.activePeriodButton,
+            { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
+          ]}
+          onPress={() => {
+            setActiveTab('view');
+            setShowAddForm(false);
+          }}
+        >
+          <ThemedText
+            variant="labelMedium"
+            style={[
+              styles.periodButtonText,
+              activeTab === 'view' && styles.activePeriodButtonText,
+            ]}
+          >
+            Summary
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.periodButton,
+            activeTab === 'add' && styles.activePeriodButton,
+            { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
+          ]}
+          onPress={() => {
+            setActiveTab('add');
+            setShowAddForm(false);
+          }}
+        >
+          <ThemedText
+            variant="labelMedium"
+            style={[
+              styles.periodButtonText,
+              activeTab === 'add' && styles.activePeriodButtonText,
+            ]}
+          >
+            Add Data
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
+
       {isLoading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primaryColor} />
@@ -1125,7 +1124,7 @@ export default function HealthScreen() {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={onRefresh} 
-              colors={[primaryColor as string]} 
+              colors={[primaryColor]} 
             />
           }
           showsVerticalScrollIndicator={false}
@@ -1134,45 +1133,6 @@ export default function HealthScreen() {
           {Platform.OS === 'ios' && (
             <HealthKitSync onSync={onRefresh} />
           )}
-          
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'view' && styles.activeTabButton,
-                { borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }
-              ]}
-              onPress={() => setActiveTab('view')}
-            >
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.tabButtonText,
-                  activeTab === 'view' && styles.activeTabButtonText,
-                ]}
-              >
-                View Data
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'add' && styles.activeTabButton,
-                { borderTopRightRadius: 8, borderBottomRightRadius: 8 }
-              ]}
-              onPress={() => setActiveTab('add')}
-            >
-              <ThemedText
-                variant="labelMedium"
-                style={[
-                  styles.tabButtonText,
-                  activeTab === 'add' && styles.activeTabButtonText,
-                ]}
-              >
-                Add Data
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
 
           {activeTab === 'view' ? (
             error ? (
@@ -1193,7 +1153,7 @@ export default function HealthScreen() {
               renderHealthMetrics()
             )
           ) : (
-            renderAddForm()
+            showAddForm ? renderAddForm() : renderAddDataCategories()
           )}
         </ScrollView>
       )}
@@ -1211,8 +1171,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
-    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
-    paddingHorizontal: spacing.md,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] + spacing.xl : spacing.xl,
+    marginHorizontal: spacing.md,
   },
   title: {
     flex: 1,
@@ -1242,35 +1202,65 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: spacing['3xl'],
   },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  tabButton: {
+  browseContainer: {
     flex: 1,
-    paddingVertical: spacing.sm,
+  },
+  searchContainer: {
+    marginBottom: spacing.lg,
+  },
+  searchBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 0,
+    backgroundColor: 'rgba(118, 118, 128, 0.12)',
+    borderRadius: 10,
+    paddingHorizontal: spacing.sm,
+    height: 36,
   },
-  activeTabButton: {
+  searchIcon: {
+    marginRight: spacing.xs,
+  },
+  micIcon: {
+    marginLeft: spacing.xs,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+    height: '100%',
+  },
+  categoriesSection: {
+    marginBottom: spacing.xl,
+  },
+  sectionTitle: {
+    marginBottom: spacing.md,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  categoriesGrid: {
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  tabButtonText: {
-    textAlign: 'center',
-    fontWeight: '500',
+  categoryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
-  activeTabButtonText: {
-    color: '#0066CC',
-    fontWeight: '600',
+  categoryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '400',
   },
   loadingContainer: {
     padding: spacing.xl,
@@ -1384,44 +1374,66 @@ const styles = StyleSheet.create({
   addButton: {
     marginTop: spacing.sm,
   },
+  timePeriodSelector: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginHorizontal: spacing.md,
+  },
+  periodButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0,
+  },
+  activePeriodButton: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  periodButtonText: {
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  activePeriodButtonText: {
+    color: '#0066CC',
+    fontWeight: '600',
+  },
   formContainer: {
     padding: spacing.md,
     borderRadius: spacing.md,
   },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    marginLeft: spacing.xs,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  formTitle: {
+    marginLeft: spacing.md,
+    fontSize: 22,
+    fontWeight: '600',
+  },
   formSection: {
     marginBottom: spacing.lg,
   },
-  formSectionTitle: {
-    marginBottom: spacing.md,
-  },
   inputContainer: {
     marginBottom: spacing.md,
-  },
-  metricTypeSelector: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  metricTypeButton: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: spacing.md,
-    borderWidth: 1.5,
-    borderColor: '#5E5CE6',
-    gap: spacing.xs,
-  },
-  metricTypeButtonActive: {
-    backgroundColor: '#5E5CE6',
-  },
-  metricTypeButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: spacing.xs,
-  },
-  metricTypeButtonTextActive: {
-    color: '#fff',
   },
   buttonContainer: {
     marginTop: spacing.lg,

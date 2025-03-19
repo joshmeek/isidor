@@ -432,8 +432,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
-    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
-    paddingHorizontal: spacing.md,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] + spacing.xl : spacing.xl,
+    marginHorizontal: spacing.md,
   },
   title: {
     flex: 1,
