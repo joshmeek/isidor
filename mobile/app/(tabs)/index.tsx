@@ -3,11 +3,13 @@ import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpa
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
+import { BackgroundGradient } from '@/components/ui/BackgroundGradient';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
 import { MetricType } from '@/services/api';
 import { spacing } from '@/constants/Spacing';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Get the USER_ID_KEY constant from the API service
@@ -196,7 +198,7 @@ export default function HomeScreen() {
       console.log('Fetching active protocols');
       const protocolsResponse = await api.getActiveProtocols();
       console.log('Received', protocolsResponse.length, 'active protocols');
-      setActiveProtocols(protocolsResponse);
+      setActiveProtocols(protocolsResponse as unknown as Protocol[]);
 
       // Load health insights - always do this, even if there are no metrics
       await loadHealthInsights();
@@ -872,6 +874,8 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <BackgroundGradient />
+      
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -880,10 +884,23 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <ThemedText variant="displaySmall" style={styles.title}>
-          Dashboard
-        </ThemedText>
-        
+        {/* Header with Profile Link */}
+        <View style={styles.header}>
+          <ThemedText variant="displaySmall" style={styles.title}>
+            Summary
+          </ThemedText>
+          <TouchableOpacity 
+            onPress={() => router.push('/profile')}
+            style={styles.profileButton}
+          >
+            <View style={styles.profileIconContainer}>
+              <ThemedText style={styles.profileInitial}>
+                {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {renderSummary()}
         
         <ThemedText variant="headingMedium" style={styles.sectionTitle}>
@@ -898,21 +915,47 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff', // Ensure white background
   },
   scrollView: {
     flex: 1,
+    zIndex: 1, // Ensure content stays above gradient
   },
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing['3xl'],
   },
-  title: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.md,
     marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
+  },
+  title: {
+    flex: 1,
   },
   sectionTitle: {
     marginTop: spacing.xl,
     marginBottom: spacing.md,
+  },
+  profileButton: {
+    marginLeft: spacing.md,
+  },
+  profileIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  profileInitial: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '500',
   },
   loadingContainer: {
     padding: spacing.xl,

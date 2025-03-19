@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -63,25 +64,24 @@ function RootLayoutNav() {
     if (!isLoading) {
       // Check if the user is on an auth screen
       const isAuthScreen = segments[0] === 'login' || segments[0] === 'network-check';
-      // Check if user is already in the tabs directory
-      const isInTabsDirectory = segments[0] === '(tabs)';
-      // Check if user is on the protocol details or create protocol screen
-      const isProtocolScreen = segments[0] === 'protocol-details' || segments[0] === 'create-protocol';
+      // Check if user is on a valid non-tab screen
+      const isValidScreen = ['profile', 'protocol-details', 'create-protocol'].includes(segments[0] || '');
       
       console.log('Navigation check:', { 
         isAuthenticated, 
-        isAuthScreen, 
-        isInTabsDirectory, 
-        isProtocolScreen,
+        isAuthScreen,
+        isValidScreen,
         segments 
       });
 
-      if (isAuthenticated && !isAuthScreen && !isInTabsDirectory && !isProtocolScreen) {
-        // Only redirect to tabs if not already in tabs and not on protocol details or create protocol
-        console.log('Redirecting to tabs');
-        router.replace('/(tabs)');
-      } else if (!isAuthenticated && !isAuthScreen) {
-        // Redirect to login if not authenticated and not on an auth screen
+      if (isAuthenticated) {
+        if (isAuthScreen) {
+          // If authenticated and on auth screen, redirect to tabs
+          console.log('Redirecting from auth screen to tabs');
+          router.replace('/(tabs)');
+        }
+      } else if (!isAuthScreen) {
+        // If not authenticated and not on auth screen, redirect to login
         console.log('Redirecting to login');
         router.replace('/login');
       }
@@ -98,34 +98,35 @@ function RootLayoutNav() {
   }
 
   return (
-    <>
-      {isAuthenticated ? (
-        <Stack initialRouteName="(tabs)">
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen 
-            name="protocol-details" 
-            options={{ 
-              headerShown: false,
-              presentation: 'card' 
-            }} 
-          />
-          <Stack.Screen 
-            name="create-protocol" 
-            options={{ 
-              headerShown: false,
-              presentation: 'card' 
-            }} 
-          />
-        </Stack>
-      ) : (
-        // Non-authenticated user sees auth stack
-        <Stack>
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="network-check" options={{ headerShown: false }} />
-        </Stack>
-      )}
-      <StatusBar style="auto" />
-    </>
+    <Stack>
+      <Stack.Screen
+        name="(tabs)"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="profile"
+        options={{ 
+          headerShown: false,
+          presentation: 'modal'
+        }}
+      />
+      <Stack.Screen
+        name="protocol-details"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="create-protocol"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="network-check"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="login"
+        options={{ headerShown: false }}
+      />
+    </Stack>
   );
 }
 

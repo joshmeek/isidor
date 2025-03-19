@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, View, Alert, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ThemedText, ThemedView, Button, Card, MetricCard, TextInput } from '@/components/ui';
+import { ThemedText, ThemedView, Button, Card, MetricCard, TextInput, BackgroundGradient } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
 import { MetricType } from '@/services/api';
@@ -1091,6 +1091,25 @@ export default function HealthScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <BackgroundGradient />
+      
+      {/* Header with Profile Link */}
+      <View style={styles.header}>
+        <ThemedText variant="displaySmall" style={styles.title}>
+          Health
+        </ThemedText>
+        <TouchableOpacity 
+          onPress={() => router.push('/profile')}
+          style={styles.profileButton}
+        >
+          <View style={styles.profileIconContainer}>
+            <ThemedText style={styles.profileInitial}>
+              {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+            </ThemedText>
+          </View>
+        </TouchableOpacity>
+      </View>
+      
       {isLoading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={primaryColor} />
@@ -1111,10 +1130,6 @@ export default function HealthScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <ThemedText variant="displaySmall" style={styles.title}>
-            Health Metrics
-          </ThemedText>
-          
           {/* Add HealthKit Sync Component */}
           {Platform.OS === 'ios' && (
             <HealthKitSync onSync={onRefresh} />
@@ -1189,6 +1204,36 @@ export default function HealthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  title: {
+    flex: 1,
+  },
+  profileButton: {
+    marginLeft: spacing.md,
+  },
+  profileIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  profileInitial: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -1196,10 +1241,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing['3xl'],
-  },
-  title: {
-    marginBottom: spacing.md,
-    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
   },
   tabContainer: {
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import { StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TouchableOpa
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ThemedText, ThemedView, Button, Card, MetricCard } from '@/components/ui';
+import { ThemedText, ThemedView, Button, Card, MetricCard, BackgroundGradient } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import * as api from '@/services/api';
 import { spacing } from '@/constants/Spacing';
@@ -360,6 +360,25 @@ export default function ProtocolsScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <BackgroundGradient />
+      
+      {/* Header with Profile Link */}
+      <View style={styles.header}>
+        <ThemedText variant="displaySmall" style={styles.title}>
+          Protocols
+        </ThemedText>
+        <TouchableOpacity 
+          onPress={() => router.push('/profile')}
+          style={styles.profileButton}
+        >
+          <View style={styles.profileIconContainer}>
+            <ThemedText style={styles.profileInitial}>
+              {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+            </ThemedText>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -372,10 +391,6 @@ export default function ProtocolsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <ThemedText variant="displaySmall" style={styles.title}>
-          Protocols
-        </ThemedText>
-        
         {renderTabs()}
 
         {isLoading && !refreshing ? (
@@ -410,6 +425,36 @@ export default function ProtocolsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  title: {
+    flex: 1,
+  },
+  profileButton: {
+    marginLeft: spacing.md,
+  },
+  profileIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  profileInitial: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -417,10 +462,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing['3xl'],
-  },
-  title: {
-    marginBottom: spacing.md,
-    marginTop: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
   },
   tabContainer: {
     flexDirection: 'row',

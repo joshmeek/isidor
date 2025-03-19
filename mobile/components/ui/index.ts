@@ -16,15 +16,16 @@
  * ```
  */
 
-export { Button } from './Button';
-export { Card } from './Card';
-export { MetricCard } from './MetricCard';
-export { IconSymbol } from './IconSymbol';
-export { TextInput } from './TextInput';
+export * from './Button';
+export * from './Card';
+export * from './MetricCard';
+export * from './IconSymbol';
+export * from './TextInput';
 export { useBottomTabOverflow } from './TabBarBackground';
 import TabBarBackground from './TabBarBackground';
 export { TabBarBackground };
 
 // Also export from parent directory for convenience
-export { ThemedText } from '../ThemedText';
-export { ThemedView } from '../ThemedView'; 
+export * from '../ThemedText';
+export * from '../ThemedView';
+export * from './BackgroundGradient'; 
