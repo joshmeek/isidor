@@ -376,11 +376,11 @@ export default function HealthScreen() {
         <View style={styles.categoriesSection}>
           <ThemedText variant="headingMedium" style={styles.sectionTitle}>
             Health Categories
-          </ThemedText>
-          
+              </ThemedText>
+            
           <View style={styles.categoriesGrid}>
             {HEALTH_CATEGORIES.map((category) => (
-              <TouchableOpacity
+            <TouchableOpacity
                 key={category.id}
                 style={styles.categoryCard}
                 onPress={() => {
@@ -393,9 +393,9 @@ export default function HealthScreen() {
                 </View>
                 <ThemedText variant="bodyMedium" style={styles.categoryName}>
                   {category.name}
-                </ThemedText>
+              </ThemedText>
                 <Ionicons name="chevron-forward" size={20} color="#999" />
-              </TouchableOpacity>
+            </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -651,12 +651,12 @@ export default function HealthScreen() {
                               {metric.source.charAt(0).toUpperCase() + metric.source.slice(1)}
                             </ThemedText>
                           </View>
-                        </View>
-                        
+          </View>
+
                         <View style={styles.metricValueContainer}>
                           <ThemedText variant="headingMedium" style={styles.metricValue}>
                             {formattedValue.primary}
-                          </ThemedText>
+              </ThemedText>
                         </View>
                       </View>
                       
@@ -666,7 +666,7 @@ export default function HealthScreen() {
                             <View key={detailIndex} style={styles.detailItem}>
                               <ThemedText variant="labelSmall" secondary>
                                 {detail.label}:
-                              </ThemedText>
+              </ThemedText>
                               <ThemedText variant="bodySmall" style={styles.detailValue}>
                                 {detail.value}
                               </ThemedText>
@@ -698,7 +698,7 @@ export default function HealthScreen() {
           
           <View style={styles.categoriesGrid}>
             {HEALTH_CATEGORIES.map((category) => (
-              <TouchableOpacity
+            <TouchableOpacity
                 key={category.id}
                 style={styles.categoryCard}
                 onPress={() => {
@@ -711,9 +711,9 @@ export default function HealthScreen() {
                 </View>
                 <ThemedText variant="bodyMedium" style={styles.categoryName}>
                   {category.name}
-                </ThemedText>
+              </ThemedText>
                 <Ionicons name="chevron-forward" size={20} color="#999" />
-              </TouchableOpacity>
+            </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -735,7 +735,7 @@ export default function HealthScreen() {
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
           <ThemedText style={styles.backButtonText}>Categories</ThemedText>
         </TouchableOpacity>
-
+        
         <View style={styles.formSection}>
           <View style={styles.formHeader}>
             <View style={[styles.categoryIcon, { backgroundColor: `${selectedCategory?.color}20` }]}>
@@ -743,7 +743,7 @@ export default function HealthScreen() {
             </View>
             <ThemedText variant="headingMedium" style={styles.formTitle}>
               {selectedCategory?.name}
-            </ThemedText>
+          </ThemedText>
           </View>
 
           <View style={styles.inputContainer}>
@@ -1042,7 +1042,7 @@ export default function HealthScreen() {
     );
   };
 
-  return (
+      return (
     <ThemedView style={styles.container}>
       <BackgroundGradient />
       
@@ -1050,7 +1050,7 @@ export default function HealthScreen() {
       <View style={styles.header}>
         <ThemedText variant="displaySmall" style={styles.title}>
           Health
-        </ThemedText>
+              </ThemedText>
         <TouchableOpacity 
           onPress={() => router.push('/profile')}
           style={styles.profileButton}
@@ -1058,11 +1058,11 @@ export default function HealthScreen() {
           <View style={styles.profileIconContainer}>
             <ThemedText style={styles.profileInitial}>
               {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
-            </ThemedText>
-          </View>
+                            </ThemedText>
+                          </View>
         </TouchableOpacity>
-      </View>
-
+                        </View>
+                        
       {/* Tab Switcher */}
       <View style={styles.timePeriodSelector}>
         <TouchableOpacity
@@ -1084,7 +1084,7 @@ export default function HealthScreen() {
             ]}
           >
             Summary
-          </ThemedText>
+                          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -1105,9 +1105,9 @@ export default function HealthScreen() {
             ]}
           >
             Add Data
-          </ThemedText>
+                              </ThemedText>
         </TouchableOpacity>
-      </View>
+                            </View>
 
       {isLoading && !refreshing ? (
         <View style={styles.loadingContainer}>
@@ -1164,7 +1164,6 @@ export default function HealthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',

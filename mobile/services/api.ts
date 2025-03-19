@@ -518,6 +518,20 @@ export interface UserProtocolStatusUpdate {
   status: string;
 }
 
+export interface UserProtocolUpdate {
+  name?: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  target_metrics?: string[];
+  steps?: string[];
+  recommendations?: string[];
+  expected_outcomes?: string[];
+  category?: string;
+  template_id?: string;
+}
+
 // Protocol API functions
 export async function getProtocols(): Promise<Protocol[]> {
   console.log('Fetching available protocols');
@@ -816,4 +830,13 @@ export async function createProtocol(protocol: ProtocolCreate): Promise<Protocol
 export async function createAndEnrollProtocol(protocol: ProtocolCreateAndEnroll): Promise<UserProtocolWithProtocol> {
   console.log('Creating and enrolling in protocol:', JSON.stringify(protocol, null, 2));
   return authenticatedRequest<UserProtocolWithProtocol>('/api/v1/user-protocols/create-and-enroll', 'POST', protocol);
+}
+
+export async function updateUserProtocol(userProtocolId: string, update: UserProtocolUpdate): Promise<UserProtocol> {
+  console.log(`Updating user protocol: ${userProtocolId}`, JSON.stringify(update, null, 2));
+  return authenticatedRequest<UserProtocol>(
+    `/api/v1/user-protocols/${userProtocolId}`,
+    'PUT',
+    update
+  );
 } 
