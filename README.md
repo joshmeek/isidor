@@ -1,8 +1,6 @@
 # Isidor
 
-> **Note:** This project is **no longer actively maintained**. The code is provided as-is for archival and informational purposes.
-
-[![Isidor Logo](https://via.placeholder.com/150/4A90E2/FFFFFF?text=Isidor)](https://isidor.ai) <!-- Placeholder logo -->
+> **Note:** This project is **no longer actively maintained**. The code is provided as-is for archival and informational purposes. I built this for myself personally but Oura has added the new AI-driven _Advisor_ feature which is effectively adjacent to this project.
 
 **Isidor: Your AI-Driven Life Protocol System**
 
@@ -76,23 +74,10 @@ The AI engine was planned to utilize various machine learning techniques:
 
 ```
 isidor/
-├── .expo/          # Expo configuration files (for React Native mobile app)
-├── .git/           # Git repository data
 ├── backend/        # FastAPI Python backend application source
-├── frontend/       # React web application source (likely)
 ├── mobile/         # React Native mobile application source
-├── node_modules/   # Installed Node.js dependencies (for frontend/mobile)
-├── web/            # Potentially another web frontend or related assets
-├── .gitignore      # Files and directories ignored by Git
-├── README.md       # This file
-├── api_spec.json   # OpenAPI (Swagger) specification for the backend API
-├── app.json        # Expo application manifest/configuration
-├── context.txt     # Original detailed project context and business plan (Archival)
-├── package-lock.json # Precise Node.js dependency versions
-├── package.json    # Project metadata and Node.js dependencies
-├── plan.txt        # Original development plan/notes (Archival)
-├── tsconfig.json   # TypeScript configuration (for frontend/mobile)
-└── vision.txt      # Original high-level project vision document (Archival)
+├── web/            # Landing page for the pojrect
+└── README.md       # This file
 ```
 
 ## Getting Started (Development Setup)
@@ -160,4 +145,4 @@ Beyond the initial MVP, the long-term vision for Isidor included:
 
 ## Contributing
 
-As this project is no longer maintained, contributions are not being accepted.
+As this project is no longer maintained, contributions are not being accepted but feel free to reach out if you want to discuss anything [https://josh.dev](https://josh.dev).
