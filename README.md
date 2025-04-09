@@ -1,6 +1,6 @@
 # Isidor
 
-> **Note:** This project is **no longer actively maintained**. The code is provided as-is for archival and informational purposes. I built this for myself personally but ended up switching to using the new _Advisor_ features in Oura for similar purposes.
+> **Note:** This project is **no longer actively maintained**. The code is provided as-is for archival and informational purposes (all visible API keys have been revoked). I built this for myself personally but ended up switching to using the new _Advisor_ features in Oura for similar purposes.
 
 **Isidor: Your AI-Driven Life Protocol System**
 
