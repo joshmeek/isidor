@@ -146,3 +146,7 @@ Beyond the initial MVP, the long-term vision for Isidor included:
 ## Contributing
 
 As this project is no longer maintained, contributions are not being accepted but feel free to reach out if you want to discuss anything [https://josh.dev](https://josh.dev).
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
